@@ -5,6 +5,7 @@ import type React from "react"
 import Image from "next/image"
 import ethioLogo from "@/assets/ethio-telecom-logo.png"
 
+
 import { useState } from "react"
 import { useRouter } from "next/navigation"
 import { useAuth } from "@/context/auth-context"
@@ -43,21 +44,22 @@ export default function LoginPage() {
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100 p-4">
       <Card className="w-full max-w-md">
-        <CardHeader className="text-center">
-          <div className="flex justify-center mb-4">
-            <Image
-              src={ethioLogo}
-              alt="Ethio Telecom Logo"
-              className="h-16 w-auto object-contain"
-              priority
-            />
-          </div> 
-          <CardDescription>
-            Tele Warehouse Management System
-            <br />
-            {/* <span className="text-sm text-muted-foreground">Ethio Telecom</span> */}
-          </CardDescription>
-        </CardHeader>
+              <CardHeader className="text-center">
+        <div className="flex justify-center mb-4">
+          <Image
+            src={ethioLogo}
+            alt="Ethio Telecom Logo"
+            className="h-16 w-auto object-contain"
+            priority
+          />
+        </div>
+        {/* <CardTitle className="text-2xl font-bold">TWMS Login</CardTitle> */}
+        <CardDescription>
+          Warehouse Management System Login
+          <br />
+          {/* <span className="text-sm text-muted-foreground">Ethio Telecom</span> */}
+        </CardDescription>
+      </CardHeader>
 
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-4">
