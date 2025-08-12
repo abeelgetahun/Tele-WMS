@@ -1,0 +1,237 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id          String   @id @default(cuid())
+  email       String   @unique
+  name        String
+  password    String
+  role        UserRole @default(INVENTORY_CLERK)
+  avatar      String?
+  isActive    Boolean  @default(true)
+  warehouseId String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Relations
+  warehouse        Warehouse?      @relation(fields: [warehouseId], references: [id])
+  managedWarehouse Warehouse[]     @relation("WarehouseManager")
+  transfersRequested StockTransfer[] @relation("RequestedBy")
+  transfersApproved  StockTransfer[] @relation("ApprovedBy")
+  auditsCreated    Audit[]         @relation("AuditorUser")
+  reportsGenerated Report[]
+
+  @@map("users")
+}
+
+model Warehouse {
+  id           String            @id @default(cuid())
+  name         String
+  location     String
+  address      String
+  phone        String?
+  capacity     Int
+  currentStock Int               @default(0)
+  status       WarehouseStatus   @default(ACTIVE)
+  managerId    String?
+  createdAt    DateTime          @default(now())
+  updatedAt    DateTime          @updatedAt
+
+  // Relations
+  manager         User?           @relation("WarehouseManager", fields: [managerId], references: [id])
+  users           User[]
+  inventoryItems  InventoryItem[]
+  transfersFrom   StockTransfer[] @relation("FromWarehouse")
+  transfersTo     StockTransfer[] @relation("ToWarehouse")
+  audits          Audit[]
+
+  @@map("warehouses")
+}
+
+model Category {
+  id          String @id @default(cuid())
+  name        String @unique
+  description String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Relations
+  inventoryItems InventoryItem[]
+
+  @@map("categories")
+}
+
+model InventoryItem {
+  id          String      @id @default(cuid())
+  name        String
+  description String?
+  sku         String      @unique
+  barcode     String?
+  quantity    Int         @default(0)
+  minStock    Int         @default(0)
+  maxStock    Int         @default(100)
+  unitPrice   Decimal     @default(0)
+  supplier    String?
+  categoryId  String
+  warehouseId String
+  status      ItemStatus  @default(IN_STOCK)
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+
+  // Relations
+  category        Category        @relation(fields: [categoryId], references: [id])
+  warehouse       Warehouse       @relation(fields: [warehouseId], references: [id])
+  stockTransfers  StockTransfer[]
+  auditItems      AuditItem[]
+
+  @@map("inventory_items")
+}
+
+model StockTransfer {
+  id            String         @id @default(cuid())
+  itemId        String
+  quantity      Int
+  fromWarehouseId String
+  toWarehouseId   String
+  requestedById   String
+  approvedById    String?
+  status        TransferStatus @default(PENDING)
+  notes         String?
+  requestDate   DateTime       @default(now())
+  approvedDate  DateTime?
+  completedDate DateTime?
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+
+  // Relations
+  item          InventoryItem @relation(fields: [itemId], references: [id])
+  fromWarehouse Warehouse     @relation("FromWarehouse", fields: [fromWarehouseId], references: [id])
+  toWarehouse   Warehouse     @relation("ToWarehouse", fields: [toWarehouseId], references: [id])
+  requestedBy   User          @relation("RequestedBy", fields: [requestedById], references: [id])
+  approvedBy    User?         @relation("ApprovedBy", fields: [approvedById], references: [id])
+
+  @@map("stock_transfers")
+}
+
+model Audit {
+  id            String      @id @default(cuid())
+  warehouseId   String
+  auditorId     String
+  type          AuditType   @default(FULL_AUDIT)
+  status        AuditStatus @default(SCHEDULED)
+  startDate     DateTime
+  endDate       DateTime?
+  itemsAudited  Int         @default(0)
+  discrepancies Int         @default(0)
+  notes         String?
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
+
+  // Relations
+  warehouse   Warehouse   @relation(fields: [warehouseId], references: [id])
+  auditor     User        @relation("AuditorUser", fields: [auditorId], references: [id])
+  auditItems  AuditItem[]
+
+  @@map("audits")
+}
+
+model AuditItem {
+  id              String  @id @default(cuid())
+  auditId         String
+  itemId          String
+  expectedQty     Int
+  actualQty       Int
+  discrepancy     Int
+  notes           String?
+
+  // Relations
+  audit InventoryItem @relation(fields: [itemId], references: [id])
+  item  Audit         @relation(fields: [auditId], references: [id])
+
+  @@map("audit_items")
+}
+
+model Report {
+  id          String       @id @default(cuid())
+  name        String
+  type        ReportType
+  warehouseId String?
+  generatedBy String
+  status      ReportStatus @default(PROCESSING)
+  format      String       @default("PDF")
+  filePath    String?
+  parameters  Json?
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+
+  // Relations
+  generator User @relation(fields: [generatedBy], references: [id])
+
+  @@map("reports")
+}
+
+// Enums
+enum UserRole {
+  ADMIN
+  WAREHOUSE_MANAGER
+  INVENTORY_CLERK
+  TECHNICIAN
+  AUDITOR
+}
+
+enum WarehouseStatus {
+  ACTIVE
+  MAINTENANCE
+  INACTIVE
+}
+
+enum ItemStatus {
+  IN_STOCK
+  LOW_STOCK
+  OUT_OF_STOCK
+}
+
+enum TransferStatus {
+  PENDING
+  APPROVED
+  IN_TRANSIT
+  COMPLETED
+  REJECTED
+}
+
+enum AuditType {
+  FULL_AUDIT
+  SPOT_CHECK
+  CYCLE_COUNT
+  EMERGENCY_AUDIT
+}
+
+enum AuditStatus {
+  SCHEDULED
+  IN_PROGRESS
+  COMPLETED
+  CANCELLED
+}
+
+enum ReportType {
+  INVENTORY
+  MOVEMENT
+  AUDIT
+  ALERT
+  USER_ACTIVITY
+}
+
+enum ReportStatus {
+  PROCESSING
+  READY
+  FAILED
+}

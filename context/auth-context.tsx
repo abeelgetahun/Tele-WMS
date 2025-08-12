@@ -2,110 +2,142 @@
 
 import type React from "react"
 import { createContext, useContext, useState, useEffect } from "react"
+import { useRouter } from "next/navigation"
+import { apiClient } from "@/lib/api-client"
+import type { UserRole } from "@/lib/permissions"
 
-export type UserRole = "admin" | "warehouse_manager" | "inventory_clerk" | "technician" | "auditor"
-
-export interface User {
+interface User {
   id: string
-  name: string
   email: string
+  name: string
   role: UserRole
-  warehouse?: string
-  avatar?: string
+  warehouseId?: string
+  warehouse?: {
+    id: string
+    name: string
+  }
 }
 
 interface AuthContextType {
   user: User | null
   login: (email: string, password: string) => Promise<boolean>
   logout: () => void
-  isLoading: boolean
+  loading: boolean
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined)
 
-// Mock users for demonstration
-const mockUsers: Record<string, { password: string; user: User }> = {
-  "admin@ethiotelecom.et": {
+// Manual fallback users
+const MANUAL_USERS = [
+  {
+    id: "admin-1",
+    email: "admin@ethiotelecom.et",
     password: "admin123",
-    user: {
-      id: "1",
-      name: "System Administrator",
-      email: "admin@ethiotelecom.et",
-      role: "admin",
-      avatar: "/placeholder.svg?height=40&width=40",
-    },
+    name: "System Administrator",
+    role: "ADMIN" as UserRole,
   },
-  "manager@ethiotelecom.et": {
+  {
+    id: "manager-1",
+    email: "manager@ethiotelecom.et",
     password: "manager123",
-    user: {
-      id: "2",
-      name: "Warehouse Manager",
-      email: "manager@ethiotelecom.et",
-      role: "warehouse_manager",
-      warehouse: "Addis Ababa Central",
-      avatar: "/placeholder.svg?height=40&width=40",
-    },
+    name: "Warehouse Manager",
+    role: "WAREHOUSE_MANAGER" as UserRole,
+    warehouseId: "warehouse-1",
+    warehouse: { id: "warehouse-1", name: "Addis Ababa Central" },
   },
-  "clerk@ethiotelecom.et": {
+  {
+    id: "clerk-1",
+    email: "clerk@ethiotelecom.et",
     password: "clerk123",
-    user: {
-      id: "3",
-      name: "Inventory Clerk",
-      email: "clerk@ethiotelecom.et",
-      role: "inventory_clerk",
-      warehouse: "Addis Ababa Central",
-      avatar: "/placeholder.svg?height=40&width=40",
-    },
+    name: "Inventory Clerk",
+    role: "INVENTORY_CLERK" as UserRole,
+    warehouseId: "warehouse-2",
+    warehouse: { id: "warehouse-2", name: "Dire Dawa Regional" },
   },
-  "tech@ethiotelecom.et": {
+  {
+    id: "technician-1",
+    email: "technician@ethiotelecom.et",
     password: "tech123",
-    user: {
-      id: "4",
-      name: "Technician",
-      email: "admin@ethiotelecom.et",
-      role: "admin",
-      avatar: "/placeholder.svg?height=40&width=40",
-    },
+    name: "System Technician",
+    role: "TECHNICIAN" as UserRole,
   },
-}
+  {
+    id: "auditor-1",
+    email: "auditor@ethiotelecom.et",
+    password: "audit123",
+    name: "System Auditor",
+    role: "AUDITOR" as UserRole,
+  },
+]
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null)
-  const [isLoading, setIsLoading] = useState(true)
+  const [loading, setLoading] = useState(true)
+  const router = useRouter()
 
   useEffect(() => {
-    // Check for stored user session
-    const storedUser = localStorage.getItem("twms_user")
-    if (storedUser) {
-      setUser(JSON.parse(storedUser))
+    // Check for existing session
+    const token = localStorage.getItem("token")
+    const userData = localStorage.getItem("user")
+
+    if (token && userData) {
+      try {
+        setUser(JSON.parse(userData))
+      } catch (error) {
+        console.error("Error parsing user data:", error)
+        localStorage.removeItem("token")
+        localStorage.removeItem("user")
+      }
     }
-    setIsLoading(false)
+
+    setLoading(false)
   }, [])
 
   const login = async (email: string, password: string): Promise<boolean> => {
-    setIsLoading(true)
+    try {
+      setLoading(true)
 
-    // Simulate API call
-    await new Promise((resolve) => setTimeout(resolve, 1000))
+      // Try database login first
+      try {
+        const response = await apiClient.post("/auth/login", { email, password })
 
-    const mockUser = mockUsers[email]
-    if (mockUser && mockUser.password === password) {
-      setUser(mockUser.user)
-      localStorage.setItem("twms_user", JSON.stringify(mockUser.user))
-      setIsLoading(false)
-      return true
+        if (response.token && response.user) {
+          localStorage.setItem("token", response.token)
+          localStorage.setItem("user", JSON.stringify(response.user))
+          setUser(response.user)
+          return true
+        }
+      } catch (dbError) {
+        console.log("Database login failed, trying manual fallback...")
+      }
+
+      // Fallback to manual users
+      const manualUser = MANUAL_USERS.find((u) => u.email === email && u.password === password)
+      if (manualUser) {
+        const { password: _, ...userWithoutPassword } = manualUser
+        localStorage.setItem("user", JSON.stringify(userWithoutPassword))
+        localStorage.setItem("token", "manual-token-" + manualUser.id)
+        setUser(userWithoutPassword)
+        return true
+      }
+
+      return false
+    } catch (error) {
+      console.error("Login error:", error)
+      return false
+    } finally {
+      setLoading(false)
     }
-
-    setIsLoading(false)
-    return false
   }
 
   const logout = () => {
+    localStorage.removeItem("token")
+    localStorage.removeItem("user")
     setUser(null)
-    localStorage.removeItem("twms_user")
+    router.push("/login")
   }
 
-  return <AuthContext.Provider value={{ user, login, logout, isLoading }}>{children}</AuthContext.Provider>
+  return <AuthContext.Provider value={{ user, login, logout, loading }}>{children}</AuthContext.Provider>
 }
 
 export function useAuth() {

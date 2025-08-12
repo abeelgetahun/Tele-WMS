@@ -2,10 +2,34 @@ This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-
 
 ## Getting Started
 
-First, run the development server:
+First, set up your local environment and database, then run the development server:
+
+```bash
+1) Copy env and configure Postgres/JWT
+
+	- Copy `.env.example` to `.env` and update `DATABASE_URL`, `JWT_SECRET`.
+	- Ensure your PostgreSQL instance is running and the database exists.
+
+2) Install deps and generate Prisma client
+
+```bash
+npm install
+npm run db:generate
+```
+
+3) Create schema and seed data (optional but recommended)
+
+```bash
+npm run db:push
+npm run db:seed
+```
+
+4) Run the development server
 
 ```bash
 npm run dev
+# or
+yarn dev
 # or
 yarn dev
 # or
@@ -16,7 +40,7 @@ bun dev
 
 Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+You can start editing the app. API routes live under `app/api/*` and use Prisma to connect to Postgres.
 
 This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
 
