@@ -2,7 +2,7 @@
 
 import type React from "react"
 
-import { useState } from "react"
+import { useEffect, useMemo, useState } from "react"
 import { MainLayout } from "@/components/layout/main-layout"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -22,126 +22,80 @@ import {
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Label } from "@/components/ui/label"
 import { Plus, Search, Edit, Trash2, Users, UserCheck, UserX } from "lucide-react"
-
-// Mock users data
-const usersData = [
-  {
-    id: "1",
-    name: "Alemayehu Tadesse",
-    email: "alemayehu@ethiotelecom.et",
-    role: "warehouse_manager",
-    warehouse: "Addis Ababa Central",
-    status: "Active",
-    lastLogin: "2024-01-16",
-    createdAt: "2023-06-15",
-    avatar: "/placeholder.svg?height=40&width=40",
-  },
-  {
-    id: "2",
-    name: "Fatuma Ahmed",
-    email: "fatuma@ethiotelecom.et",
-    role: "warehouse_manager",
-    warehouse: "Dire Dawa Regional",
-    status: "Active",
-    lastLogin: "2024-01-15",
-    createdAt: "2023-07-20",
-    avatar: "/placeholder.svg?height=40&width=40",
-  },
-  {
-    id: "3",
-    name: "Getachew Alemu",
-    email: "getachew@ethiotelecom.et",
-    role: "inventory_clerk",
-    warehouse: "Bahir Dar Branch",
-    status: "Active",
-    lastLogin: "2024-01-16",
-    createdAt: "2023-08-10",
-    avatar: "/placeholder.svg?height=40&width=40",
-  },
-  {
-    id: "4",
-    name: "Hailay Gebru",
-    email: "hailay@ethiotelecom.et",
-    role: "auditor",
-    warehouse: "Mekelle Central",
-    status: "Inactive",
-    lastLogin: "2024-01-10",
-    createdAt: "2023-05-25",
-    avatar: "/placeholder.svg?height=40&width=40",
-  },
-  {
-    id: "5",
-    name: "Tekle Mamo",
-    email: "tekle@ethiotelecom.et",
-    role: "technician",
-    warehouse: "Hawassa Branch",
-    status: "Active",
-    lastLogin: "2024-01-14",
-    createdAt: "2023-09-05",
-    avatar: "/placeholder.svg?height=40&width=40",
-  },
-]
+import { apiClient } from "@/lib/api-client"
+import { useToast } from "@/hooks/use-toast"
+import { ProtectedRoute } from "@/components/layout/protected-route"
+import { useAuth } from "@/context/auth-context"
+import { hasPermission } from "@/lib/permissions"
 
 const roles = [
-  { value: "admin", label: "Administrator" },
-  { value: "warehouse_manager", label: "Warehouse Manager" },
-  { value: "inventory_clerk", label: "Inventory Clerk" },
-  { value: "technician", label: "Technician" },
-  { value: "auditor", label: "Auditor" },
-]
-
-const warehouses = [
-  "Addis Ababa Central",
-  "Dire Dawa Regional",
-  "Bahir Dar Branch",
-  "Mekelle Central",
-  "Hawassa Branch",
-  "Jimma Regional",
+  { value: "ADMIN", label: "Administrator" },
+  { value: "WAREHOUSE_MANAGER", label: "Warehouse Manager" },
+  { value: "INVENTORY_CLERK", label: "Inventory Clerk" },
+  { value: "TECHNICIAN", label: "Technician" },
+  { value: "AUDITOR", label: "Auditor" },
 ]
 
 export default function UsersPage() {
-  const [users, setUsers] = useState(usersData)
+  const { user } = useAuth()
+  const { toast } = useToast()
+  const [users, setUsers] = useState<any[]>([])
   const [searchTerm, setSearchTerm] = useState("")
-  const [roleFilter, setRoleFilter] = useState("All Roles")
-  const [statusFilter, setStatusFilter] = useState("All Status")
+  const [roleFilter, setRoleFilter] = useState("ALL")
+  const [statusFilter, setStatusFilter] = useState("ALL")
   const [isNewUserOpen, setIsNewUserOpen] = useState(false)
   const [newUser, setNewUser] = useState({
     name: "",
     email: "",
+    password: "",
     role: "",
-    warehouse: "",
+    warehouseId: "",
     status: "Active",
   })
+  const [warehouses, setWarehouses] = useState<{ id: string; name: string }[]>([])
 
-  const filteredUsers = users.filter((user) => {
+  useEffect(() => {
+    const load = async () => {
+      try {
+        const [usrs, whs] = (await Promise.all([apiClient.getUsers(), apiClient.getWarehouses()])) as [any[], any[]]
+        setUsers(usrs)
+        setWarehouses(whs.map((w: any) => ({ id: w.id, name: w.name })))
+      } catch (e: any) {
+        toast({ title: "Error", description: e?.message || "Failed to load users", variant: "destructive" })
+      }
+    }
+    load()
+  }, [toast])
+
+  const filteredUsers = useMemo(() => users.filter((user: any) => {
     const matchesSearch =
       user.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
       user.email.toLowerCase().includes(searchTerm.toLowerCase())
 
-    const matchesRole = roleFilter === "All Roles" || user.role === roleFilter
-    const matchesStatus = statusFilter === "All Status" || user.status === statusFilter
+    const matchesRole = roleFilter === "ALL" || user.role === roleFilter
+    const matchesStatus = statusFilter === "ALL" || (user.isActive ? "Active" : "Inactive") === statusFilter
 
     return matchesSearch && matchesRole && matchesStatus
-  })
+  }), [users, searchTerm, roleFilter, statusFilter])
 
   const getRoleDisplay = (role: string) => {
     const roleMap: Record<string, string> = {
-      admin: "Administrator",
-      warehouse_manager: "Warehouse Manager",
-      inventory_clerk: "Inventory Clerk",
-      technician: "Technician",
-      auditor: "Auditor",
+      ADMIN: "Administrator",
+      WAREHOUSE_MANAGER: "Warehouse Manager",
+      INVENTORY_CLERK: "Inventory Clerk",
+      TECHNICIAN: "Technician",
+      AUDITOR: "Auditor",
     }
     return roleMap[role] || role
   }
 
   const getRoleBadgeVariant = (role: string) => {
     const variantMap: Record<string, "default" | "secondary" | "destructive" | "outline"> = {
-      admin: "destructive",
-      warehouse_manager: "default",
-      inventory_clerk: "secondary",
-      technician: "outline",
-      auditor: "secondary",
+      ADMIN: "destructive",
+      WAREHOUSE_MANAGER: "default",
+      INVENTORY_CLERK: "secondary",
+      TECHNICIAN: "outline",
+      AUDITOR: "secondary",
     }
     return variantMap[role] || "default"
   }
@@ -165,28 +119,24 @@ export default function UsersPage() {
     )
   }
 
-  const handleCreateUser = () => {
-    const user = {
-      id: (users.length + 1).toString(),
-      name: newUser.name,
-      email: newUser.email,
-      role: newUser.role,
-      warehouse: newUser.warehouse,
-      status: newUser.status,
-      lastLogin: "Never",
-      createdAt: new Date().toISOString().split("T")[0],
-      avatar: `/placeholder.svg?height=40&width=40&query=${newUser.name.split(" ")[0].toLowerCase()}`,
+  const handleCreateUser = async () => {
+    try {
+      const payload = {
+        name: newUser.name,
+        email: newUser.email,
+        password: newUser.password || "password123",
+        role: newUser.role,
+        warehouseId: newUser.warehouseId || undefined,
+        isActive: newUser.status === "Active",
+      }
+      const created = await apiClient.createUser(payload)
+      setUsers((prev) => [created, ...prev])
+      toast({ title: "User created" })
+      setNewUser({ name: "", email: "", password: "", role: "", warehouseId: "", status: "Active" })
+      setIsNewUserOpen(false)
+    } catch (e: any) {
+      toast({ title: "Error", description: e?.message || "Failed to create user", variant: "destructive" })
     }
-
-    setUsers([...users, user])
-    setNewUser({
-      name: "",
-      email: "",
-      role: "",
-      warehouse: "",
-      status: "Active",
-    })
-    setIsNewUserOpen(false)
   }
 
   const getStatusCounts = () => {
@@ -194,14 +144,15 @@ export default function UsersPage() {
       total: users.length,
       active: users.filter((u) => u.status === "Active").length,
       inactive: users.filter((u) => u.status === "Inactive").length,
-      admins: users.filter((u) => u.role === "admin").length,
+  admins: users.filter((u: any) => u.role === "ADMIN").length,
     }
   }
 
   const statusCounts = getStatusCounts()
 
   return (
-    <MainLayout>
+    <ProtectedRoute resource="users" action="read">
+      <MainLayout>
       <div className="space-y-6">
         {/* Header */}
         <div className="flex items-center justify-between">
@@ -209,13 +160,14 @@ export default function UsersPage() {
             <h1 className="text-3xl font-bold tracking-tight">User Management</h1>
             <p className="text-muted-foreground">Manage system users and their access permissions</p>
           </div>
-          <Dialog open={isNewUserOpen} onOpenChange={setIsNewUserOpen}>
-            <DialogTrigger asChild>
-              <Button>
-                <Plus className="mr-2 h-4 w-4" />
-                Add User
-              </Button>
-            </DialogTrigger>
+          {hasPermission(user?.role, "users", "create") && (
+            <Dialog open={isNewUserOpen} onOpenChange={setIsNewUserOpen}>
+              <DialogTrigger asChild>
+                <Button>
+                  <Plus className="mr-2 h-4 w-4" />
+                  Add User
+                </Button>
+              </DialogTrigger>
             <DialogContent className="sm:max-w-[500px]">
               <DialogHeader>
                 <DialogTitle>Add New User</DialogTitle>
@@ -243,6 +195,17 @@ export default function UsersPage() {
                   />
                 </div>
 
+                <div className="space-y-2">
+                  <Label htmlFor="password">Password</Label>
+                  <Input
+                    id="password"
+                    type="password"
+                    value={newUser.password}
+                    onChange={(e) => setNewUser({ ...newUser, password: e.target.value })}
+                    placeholder="At least 6 characters"
+                  />
+                </div>
+
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2">
                     <Label htmlFor="role">Role</Label>
@@ -263,16 +226,16 @@ export default function UsersPage() {
                   <div className="space-y-2">
                     <Label htmlFor="warehouse">Warehouse</Label>
                     <Select
-                      value={newUser.warehouse}
-                      onValueChange={(value) => setNewUser({ ...newUser, warehouse: value })}
+                      value={newUser.warehouseId}
+                      onValueChange={(value) => setNewUser({ ...newUser, warehouseId: value })}
                     >
                       <SelectTrigger>
                         <SelectValue placeholder="Select warehouse" />
                       </SelectTrigger>
                       <SelectContent>
                         {warehouses.map((warehouse) => (
-                          <SelectItem key={warehouse} value={warehouse}>
-                            {warehouse}
+                          <SelectItem key={warehouse.id} value={warehouse.id}>
+                            {warehouse.name}
                           </SelectItem>
                         ))}
                       </SelectContent>
@@ -300,7 +263,8 @@ export default function UsersPage() {
                 <Button onClick={handleCreateUser}>Add User</Button>
               </DialogFooter>
             </DialogContent>
-          </Dialog>
+            </Dialog>
+          )}
         </div>
 
         {/* Stats Cards */}
@@ -366,12 +330,12 @@ export default function UsersPage() {
                 </div>
               </div>
 
-              <Select value={roleFilter} onValueChange={setRoleFilter}>
+        <Select value={roleFilter} onValueChange={setRoleFilter}>
                 <SelectTrigger className="w-[180px]">
                   <SelectValue placeholder="Role" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="All Roles">All Roles</SelectItem>
+          <SelectItem value="ALL">All Roles</SelectItem>
                   {roles.map((role) => (
                     <SelectItem key={role.value} value={role.value}>
                       {role.label}
@@ -380,12 +344,12 @@ export default function UsersPage() {
                 </SelectContent>
               </Select>
 
-              <Select value={statusFilter} onValueChange={setStatusFilter}>
+        <Select value={statusFilter} onValueChange={setStatusFilter}>
                 <SelectTrigger className="w-[150px]">
                   <SelectValue placeholder="Status" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="All Status">All Status</SelectItem>
+          <SelectItem value="ALL">All Status</SelectItem>
                   <SelectItem value="Active">Active</SelectItem>
                   <SelectItem value="Inactive">Inactive</SelectItem>
                 </SelectContent>
@@ -416,7 +380,7 @@ export default function UsersPage() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {filteredUsers.map((user) => (
+                {filteredUsers.map((user: any) => (
                   <TableRow key={user.id}>
                     <TableCell>
                       <div className="flex items-center space-x-3">
@@ -425,7 +389,7 @@ export default function UsersPage() {
                           <AvatarFallback>
                             {user.name
                               .split(" ")
-                              .map((n) => n[0])
+                              .map((n: string) => n[0])
                               .join("")}
                           </AvatarFallback>
                         </Avatar>
@@ -438,10 +402,10 @@ export default function UsersPage() {
                     <TableCell>
                       <Badge variant={getRoleBadgeVariant(user.role)}>{getRoleDisplay(user.role)}</Badge>
                     </TableCell>
-                    <TableCell>{user.warehouse}</TableCell>
-                    <TableCell>{getStatusBadge(user.status)}</TableCell>
-                    <TableCell>{user.lastLogin}</TableCell>
-                    <TableCell>{user.createdAt}</TableCell>
+                    <TableCell>{user.warehouse?.name || "-"}</TableCell>
+                    <TableCell>{getStatusBadge(user.isActive ? "Active" : "Inactive")}</TableCell>
+                    <TableCell>{user.lastLogin ? new Date(user.lastLogin).toISOString().split("T")[0] : "-"}</TableCell>
+                    <TableCell>{new Date(user.createdAt).toISOString().split("T")[0]}</TableCell>
                     <TableCell>
                       <div className="flex space-x-2">
                         <Button variant="ghost" size="sm">
@@ -459,6 +423,7 @@ export default function UsersPage() {
           </CardContent>
         </Card>
       </div>
-    </MainLayout>
+      </MainLayout>
+    </ProtectedRoute>
   )
 }

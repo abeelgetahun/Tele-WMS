@@ -2,7 +2,7 @@
 
 import type React from "react"
 
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import { useRouter } from "next/navigation"
 import { MainLayout } from "@/components/layout/main-layout"
 import { Button } from "@/components/ui/button"
@@ -13,30 +13,30 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { ArrowLeft, Save } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
+import { apiClient } from "@/lib/api-client"
 
-const categories = ["Network Equipment", "Cables", "SIM Cards", "Devices", "Accessories", "Tools", "Consumables"]
-
-const warehouses = [
-  "Addis Ababa Central",
-  "Dire Dawa Regional",
-  "Bahir Dar Branch",
-  "Mekelle Central",
-  "Hawassa Branch",
-  "Jimma Regional",
+const suppliers = [
+  "Tech Solutions Ltd",
+  "Cable Corp",
+  "Ethio Telecom",
+  "Fiber Tech",
+  "Network Pro",
+  "Equipment Plus",
 ]
-
-const suppliers = ["Tech Solutions Ltd", "Cable Corp", "Ethio Telecom", "Fiber Tech", "Network Pro", "Equipment Plus"]
 
 export default function AddInventoryPage() {
   const router = useRouter()
   const { toast } = useToast()
+  const [categories, setCategories] = useState<{ id: string; name: string }[]>([])
+  const [warehouses, setWarehouses] = useState<{ id: string; name: string }[]>([])
+  const [loading, setLoading] = useState(true)
   const [formData, setFormData] = useState({
     name: "",
     description: "",
-    category: "",
+    categoryId: "",
     sku: "",
     barcode: "",
-    warehouse: "",
+    warehouseId: "",
     quantity: "",
     minStock: "",
     maxStock: "",
@@ -46,6 +46,25 @@ export default function AddInventoryPage() {
     notes: "",
   })
 
+  useEffect(() => {
+    const load = async () => {
+      try {
+        setLoading(true)
+        const [cats, whs] = (await Promise.all([apiClient.getCategories(), apiClient.getWarehouses()])) as [
+          any[],
+          any[],
+        ]
+        setCategories(cats.map((c: any) => ({ id: c.id, name: c.name })))
+        setWarehouses(whs.map((w: any) => ({ id: w.id, name: w.name })))
+      } catch (e) {
+        // ignore, toast below on submit if needed
+      } finally {
+        setLoading(false)
+      }
+    }
+    load()
+  }, [])
+
   const handleInputChange = (field: string, value: string) => {
     setFormData((prev) => ({
       ...prev,
@@ -54,17 +73,18 @@ export default function AddInventoryPage() {
   }
 
   const generateSKU = () => {
-    const prefix = formData.category.substring(0, 3).toUpperCase()
+    const categoryName = categories.find((c) => c.id === formData.categoryId)?.name || "GEN"
+    const prefix = categoryName.substring(0, 3).toUpperCase()
     const random = Math.random().toString(36).substring(2, 8).toUpperCase()
     const sku = `${prefix}-${random}`
     setFormData((prev) => ({ ...prev, sku }))
   }
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
 
     // Validate required fields
-    const requiredFields = ["name", "category", "sku", "warehouse", "quantity", "unitPrice", "supplier"]
+    const requiredFields = ["name", "categoryId", "sku", "warehouseId", "quantity", "unitPrice", "supplier"]
     const missingFields = requiredFields.filter((field) => !formData[field as keyof typeof formData])
 
     if (missingFields.length > 0) {
@@ -76,14 +96,25 @@ export default function AddInventoryPage() {
       return
     }
 
-    // Simulate API call
-    setTimeout(() => {
-      toast({
-        title: "Item Added Successfully",
-        description: `${formData.name} has been added to inventory.`,
+    try {
+      await apiClient.createInventoryItem({
+        name: formData.name,
+        description: formData.description || undefined,
+        sku: formData.sku,
+        barcode: formData.barcode || undefined,
+        quantity: Number(formData.quantity),
+        minStock: formData.minStock ? Number(formData.minStock) : 0,
+        maxStock: formData.maxStock ? Number(formData.maxStock) : 100,
+        unitPrice: Number(formData.unitPrice),
+        supplier: formData.supplier || undefined,
+        categoryId: formData.categoryId,
+        warehouseId: formData.warehouseId,
       })
+      toast({ title: "Item Added Successfully", description: `${formData.name} has been added to inventory.` })
       router.push("/inventory")
-    }, 1000)
+    } catch (err: any) {
+      toast({ title: "Error", description: err?.message || "Failed to create item", variant: "destructive" })
+    }
   }
 
   return (
@@ -124,14 +155,18 @@ export default function AddInventoryPage() {
                     </div>
                     <div className="space-y-2">
                       <Label htmlFor="category">Category *</Label>
-                      <Select value={formData.category} onValueChange={(value) => handleInputChange("category", value)}>
+                      <Select
+                        value={formData.categoryId}
+                        onValueChange={(value) => handleInputChange("categoryId", value)}
+                        disabled={loading}
+                      >
                         <SelectTrigger>
                           <SelectValue placeholder="Select category" />
                         </SelectTrigger>
                         <SelectContent>
                           {categories.map((category) => (
-                            <SelectItem key={category} value={category}>
-                              {category}
+                            <SelectItem key={category.id} value={category.id}>
+                              {category.name}
                             </SelectItem>
                           ))}
                         </SelectContent>
@@ -190,14 +225,18 @@ export default function AddInventoryPage() {
                 <CardContent className="space-y-4">
                   <div className="space-y-2">
                     <Label htmlFor="warehouse">Warehouse *</Label>
-                    <Select value={formData.warehouse} onValueChange={(value) => handleInputChange("warehouse", value)}>
+                    <Select
+                      value={formData.warehouseId}
+                      onValueChange={(value) => handleInputChange("warehouseId", value)}
+                      disabled={loading}
+                    >
                       <SelectTrigger>
                         <SelectValue placeholder="Select warehouse" />
                       </SelectTrigger>
                       <SelectContent>
                         {warehouses.map((warehouse) => (
-                          <SelectItem key={warehouse} value={warehouse}>
-                            {warehouse}
+                          <SelectItem key={warehouse.id} value={warehouse.id}>
+                            {warehouse.name}
                           </SelectItem>
                         ))}
                       </SelectContent>

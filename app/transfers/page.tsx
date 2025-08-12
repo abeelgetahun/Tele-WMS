@@ -2,7 +2,7 @@
 
 import type React from "react"
 
-import { useState } from "react"
+import { useEffect, useMemo, useState } from "react"
 import { MainLayout } from "@/components/layout/main-layout"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -22,116 +22,72 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { Plus, Search, ArrowRight, Eye, CheckCircle, XCircle, Clock } from "lucide-react"
-
-// Mock transfer data
-const transfersData = [
-  {
-    id: "TRF001",
-    item: "Router TP-Link AC1200",
-    sku: "TPL-AC1200",
-    quantity: 10,
-    fromWarehouse: "Addis Ababa Central",
-    toWarehouse: "Dire Dawa Regional",
-    requestedBy: "Fatuma Ahmed",
-    approvedBy: "Alemayehu Tadesse",
-    status: "Completed",
-    requestDate: "2024-01-15",
-    completedDate: "2024-01-16",
-    notes: "Urgent transfer for network expansion",
-  },
-  {
-    id: "TRF002",
-    item: "Ethernet Cable Cat6 (100m)",
-    sku: "ETH-CAT6-100",
-    quantity: 25,
-    fromWarehouse: "Bahir Dar Branch",
-    toWarehouse: "Mekelle Central",
-    requestedBy: "Hailay Gebru",
-    approvedBy: null,
-    status: "Pending",
-    requestDate: "2024-01-16",
-    completedDate: null,
-    notes: "Monthly stock redistribution",
-  },
-  {
-    id: "TRF003",
-    item: "SIM Card - Prepaid",
-    sku: "SIM-PREP-001",
-    quantity: 100,
-    fromWarehouse: "Addis Ababa Central",
-    toWarehouse: "Hawassa Branch",
-    requestedBy: "Tekle Mamo",
-    approvedBy: "Alemayehu Tadesse",
-    status: "In Transit",
-    requestDate: "2024-01-14",
-    completedDate: null,
-    notes: "Customer demand increase",
-  },
-  {
-    id: "TRF004",
-    item: "Wireless Access Point",
-    sku: "WAP-001",
-    quantity: 5,
-    fromWarehouse: "Dire Dawa Regional",
-    toWarehouse: "Jimma Regional",
-    requestedBy: "Meseret Bekele",
-    approvedBy: null,
-    status: "Rejected",
-    requestDate: "2024-01-13",
-    completedDate: null,
-    notes: "Insufficient stock at source warehouse",
-  },
-]
-
-const warehouses = [
-  "Addis Ababa Central",
-  "Dire Dawa Regional",
-  "Bahir Dar Branch",
-  "Mekelle Central",
-  "Hawassa Branch",
-  "Jimma Regional",
-]
-
-const mockInventory = [
-  { sku: "TPL-AC1200", name: "Router TP-Link AC1200", available: 45 },
-  { sku: "ETH-CAT6-100", name: "Ethernet Cable Cat6 (100m)", available: 15 },
-  { sku: "SIM-PREP-001", name: "SIM Card - Prepaid", available: 500 },
-  { sku: "WAP-001", name: "Wireless Access Point", available: 32 },
-]
+import { apiClient } from "@/lib/api-client"
+import { useToast } from "@/hooks/use-toast"
+import { ProtectedRoute } from "@/components/layout/protected-route"
+import { hasPermission } from "@/lib/permissions"
+import { useAuth } from "@/context/auth-context"
 
 export default function TransfersPage() {
-  const [transfers, setTransfers] = useState(transfersData)
+  const { user } = useAuth()
+  const { toast } = useToast()
+  const [transfers, setTransfers] = useState<any[]>([])
   const [searchTerm, setSearchTerm] = useState("")
-  const [statusFilter, setStatusFilter] = useState("All Status")
+  const [statusFilter, setStatusFilter] = useState("ALL")
   const [isNewTransferOpen, setIsNewTransferOpen] = useState(false)
   const [newTransfer, setNewTransfer] = useState({
-    item: "",
+    itemId: "",
     quantity: "",
-    fromWarehouse: "",
-    toWarehouse: "",
+    fromWarehouseId: "",
+    toWarehouseId: "",
     notes: "",
   })
+  const [warehouses, setWarehouses] = useState<{ id: string; name: string }[]>([])
+  const [items, setItems] = useState<any[]>([])
+  const [loading, setLoading] = useState(true)
 
-  const filteredTransfers = transfers.filter((transfer) => {
+  useEffect(() => {
+    const load = async () => {
+      try {
+        setLoading(true)
+        const [trs, whs, inv] = (await Promise.all([
+          apiClient.getTransfers({ status: statusFilter === "ALL" ? "all" : statusFilter }),
+          apiClient.getWarehouses(),
+          apiClient.getInventory(),
+        ])) as [any[], any[], any[]]
+        setTransfers(trs)
+        setWarehouses(whs.map((w: any) => ({ id: w.id, name: w.name })))
+        setItems(inv)
+      } catch (e: any) {
+        toast({ title: "Error", description: e?.message || "Failed to load transfers", variant: "destructive" })
+      } finally {
+        setLoading(false)
+      }
+    }
+    load()
+  }, [statusFilter, toast])
+
+  const filteredTransfers = useMemo(() => transfers.filter((transfer: any) => {
     const matchesSearch =
-      transfer.item.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      transfer.sku.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      transfer.item?.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      transfer.item?.sku?.toLowerCase().includes(searchTerm.toLowerCase()) ||
       transfer.id.toLowerCase().includes(searchTerm.toLowerCase())
 
-    const matchesStatus = statusFilter === "All Status" || transfer.status === statusFilter
+    const matchesStatus = statusFilter === "ALL" || transfer.status === statusFilter
 
     return matchesSearch && matchesStatus
-  })
+  }), [transfers, searchTerm, statusFilter])
 
   const getStatusBadge = (status: string) => {
     const variants: Record<
       string,
       { variant: "default" | "secondary" | "destructive" | "outline"; icon: React.ReactNode }
     > = {
-      Completed: { variant: "default", icon: <CheckCircle className="w-3 h-3 mr-1" /> },
-      "In Transit": { variant: "secondary", icon: <Clock className="w-3 h-3 mr-1" /> },
-      Pending: { variant: "outline", icon: <Clock className="w-3 h-3 mr-1" /> },
-      Rejected: { variant: "destructive", icon: <XCircle className="w-3 h-3 mr-1" /> },
+      COMPLETED: { variant: "default", icon: <CheckCircle className="w-3 h-3 mr-1" /> },
+      IN_TRANSIT: { variant: "secondary", icon: <Clock className="w-3 h-3 mr-1" /> },
+      PENDING: { variant: "outline", icon: <Clock className="w-3 h-3 mr-1" /> },
+      REJECTED: { variant: "destructive", icon: <XCircle className="w-3 h-3 mr-1" /> },
+      APPROVED: { variant: "default", icon: <CheckCircle className="w-3 h-3 mr-1" /> },
     }
 
     const config = variants[status] || { variant: "outline", icon: null }
@@ -139,51 +95,54 @@ export default function TransfersPage() {
     return (
       <Badge variant={config.variant} className="flex items-center">
         {config.icon}
-        {status}
+        {status.replace("_", " ")}
       </Badge>
     )
   }
 
-  const handleCreateTransfer = () => {
-    const transfer = {
-      id: `TRF${(transfers.length + 1).toString().padStart(3, "0")}`,
-      item: mockInventory.find((item) => item.sku === newTransfer.item)?.name || "",
-      sku: newTransfer.item,
-      quantity: Number.parseInt(newTransfer.quantity),
-      fromWarehouse: newTransfer.fromWarehouse,
-      toWarehouse: newTransfer.toWarehouse,
-      requestedBy: "Current User",
-      approvedBy: null,
-      status: "Pending",
-      requestDate: new Date().toISOString().split("T")[0],
-      completedDate: null,
-      notes: newTransfer.notes,
+  const handleCreateTransfer = async () => {
+    try {
+      await apiClient.createTransfer({
+        itemId: newTransfer.itemId,
+        quantity: Number(newTransfer.quantity),
+        fromWarehouseId: newTransfer.fromWarehouseId,
+        toWarehouseId: newTransfer.toWarehouseId,
+        notes: newTransfer.notes || undefined,
+      })
+      toast({ title: "Transfer created" })
+      setIsNewTransferOpen(false)
+      setNewTransfer({ itemId: "", quantity: "", fromWarehouseId: "", toWarehouseId: "", notes: "" })
+      const refreshed = (await apiClient.getTransfers({ status: statusFilter === "ALL" ? "all" : statusFilter })) as any[]
+      setTransfers(refreshed)
+    } catch (e: any) {
+      toast({ title: "Error", description: e?.message || "Failed to create transfer", variant: "destructive" })
     }
+  }
 
-    setTransfers([transfer, ...transfers])
-    setNewTransfer({
-      item: "",
-      quantity: "",
-      fromWarehouse: "",
-      toWarehouse: "",
-      notes: "",
-    })
-    setIsNewTransferOpen(false)
+  const handleApprove = async (id: string) => {
+    try {
+      await apiClient.approveTransfer(id)
+      toast({ title: "Transfer approved" })
+      setTransfers((prev) => prev.map((t) => (t.id === id ? { ...t, status: "APPROVED" } : t)))
+    } catch (e: any) {
+      toast({ title: "Error", description: e?.message || "Failed to approve", variant: "destructive" })
+    }
   }
 
   const getStatusCounts = () => {
     return {
       total: transfers.length,
-      pending: transfers.filter((t) => t.status === "Pending").length,
-      inTransit: transfers.filter((t) => t.status === "In Transit").length,
-      completed: transfers.filter((t) => t.status === "Completed").length,
+      pending: transfers.filter((t) => t.status === "PENDING").length,
+      inTransit: transfers.filter((t) => t.status === "IN_TRANSIT").length,
+      completed: transfers.filter((t) => t.status === "COMPLETED").length,
     }
   }
 
   const statusCounts = getStatusCounts()
 
   return (
-    <MainLayout>
+    <ProtectedRoute resource="transfers" action="read">
+      <MainLayout>
       <div className="space-y-6">
         {/* Header */}
         <div className="flex items-center justify-between">
@@ -191,13 +150,14 @@ export default function TransfersPage() {
             <h1 className="text-3xl font-bold tracking-tight">Stock Transfers</h1>
             <p className="text-muted-foreground">Manage stock movements between warehouses</p>
           </div>
-          <Dialog open={isNewTransferOpen} onOpenChange={setIsNewTransferOpen}>
-            <DialogTrigger asChild>
-              <Button>
-                <Plus className="mr-2 h-4 w-4" />
-                New Transfer
-              </Button>
-            </DialogTrigger>
+          {hasPermission(user?.role, "transfers", "create") && (
+            <Dialog open={isNewTransferOpen} onOpenChange={setIsNewTransferOpen}>
+              <DialogTrigger asChild>
+                <Button>
+                  <Plus className="mr-2 h-4 w-4" />
+                  New Transfer
+                </Button>
+              </DialogTrigger>
             <DialogContent className="sm:max-w-[500px]">
               <DialogHeader>
                 <DialogTitle>Create Stock Transfer</DialogTitle>
@@ -207,16 +167,23 @@ export default function TransfersPage() {
                 <div className="space-y-2">
                   <Label htmlFor="item">Item</Label>
                   <Select
-                    value={newTransfer.item}
-                    onValueChange={(value) => setNewTransfer({ ...newTransfer, item: value })}
+                    value={newTransfer.itemId}
+                    onValueChange={(value) => {
+                      const itm = items.find((i) => i.id === value)
+                      setNewTransfer({
+                        ...newTransfer,
+                        itemId: value,
+                        fromWarehouseId: itm?.warehouse?.id || newTransfer.fromWarehouseId,
+                      })
+                    }}
                   >
                     <SelectTrigger>
                       <SelectValue placeholder="Select item" />
                     </SelectTrigger>
                     <SelectContent>
-                      {mockInventory.map((item) => (
-                        <SelectItem key={item.sku} value={item.sku}>
-                          {item.name} (Available: {item.available})
+                      {items.map((item) => (
+                        <SelectItem key={item.id} value={item.id}>
+                          {item.name} — {item.sku} ({item.warehouse?.name})
                         </SelectItem>
                       ))}
                     </SelectContent>
@@ -239,16 +206,16 @@ export default function TransfersPage() {
                   <div className="space-y-2">
                     <Label htmlFor="fromWarehouse">From Warehouse</Label>
                     <Select
-                      value={newTransfer.fromWarehouse}
-                      onValueChange={(value) => setNewTransfer({ ...newTransfer, fromWarehouse: value })}
+                      value={newTransfer.fromWarehouseId}
+                      onValueChange={(value) => setNewTransfer({ ...newTransfer, fromWarehouseId: value })}
                     >
                       <SelectTrigger>
                         <SelectValue placeholder="Select source" />
                       </SelectTrigger>
                       <SelectContent>
                         {warehouses.map((warehouse) => (
-                          <SelectItem key={warehouse} value={warehouse}>
-                            {warehouse}
+                          <SelectItem key={warehouse.id} value={warehouse.id}>
+                            {warehouse.name}
                           </SelectItem>
                         ))}
                       </SelectContent>
@@ -258,18 +225,18 @@ export default function TransfersPage() {
                   <div className="space-y-2">
                     <Label htmlFor="toWarehouse">To Warehouse</Label>
                     <Select
-                      value={newTransfer.toWarehouse}
-                      onValueChange={(value) => setNewTransfer({ ...newTransfer, toWarehouse: value })}
+                      value={newTransfer.toWarehouseId}
+                      onValueChange={(value) => setNewTransfer({ ...newTransfer, toWarehouseId: value })}
                     >
                       <SelectTrigger>
                         <SelectValue placeholder="Select destination" />
                       </SelectTrigger>
                       <SelectContent>
                         {warehouses
-                          .filter((w) => w !== newTransfer.fromWarehouse)
+                          .filter((w) => w.id !== newTransfer.fromWarehouseId)
                           .map((warehouse) => (
-                            <SelectItem key={warehouse} value={warehouse}>
-                              {warehouse}
+                            <SelectItem key={warehouse.id} value={warehouse.id}>
+                              {warehouse.name}
                             </SelectItem>
                           ))}
                       </SelectContent>
@@ -294,7 +261,8 @@ export default function TransfersPage() {
                 <Button onClick={handleCreateTransfer}>Create Transfer</Button>
               </DialogFooter>
             </DialogContent>
-          </Dialog>
+            </Dialog>
+          )}
         </div>
 
         {/* Stats Cards */}
@@ -356,16 +324,17 @@ export default function TransfersPage() {
                 </div>
               </div>
 
-              <Select value={statusFilter} onValueChange={setStatusFilter}>
+        <Select value={statusFilter} onValueChange={setStatusFilter}>
                 <SelectTrigger className="w-[150px]">
                   <SelectValue placeholder="Status" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="All Status">All Status</SelectItem>
-                  <SelectItem value="Pending">Pending</SelectItem>
-                  <SelectItem value="In Transit">In Transit</SelectItem>
-                  <SelectItem value="Completed">Completed</SelectItem>
-                  <SelectItem value="Rejected">Rejected</SelectItem>
+          <SelectItem value="ALL">All Status</SelectItem>
+          <SelectItem value="PENDING">Pending</SelectItem>
+          <SelectItem value="IN_TRANSIT">In Transit</SelectItem>
+          <SelectItem value="COMPLETED">Completed</SelectItem>
+          <SelectItem value="APPROVED">Approved</SelectItem>
+          <SelectItem value="REJECTED">Rejected</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -395,30 +364,37 @@ export default function TransfersPage() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {filteredTransfers.map((transfer) => (
+                {filteredTransfers.map((transfer: any) => (
                   <TableRow key={transfer.id}>
                     <TableCell className="font-mono text-sm">{transfer.id}</TableCell>
                     <TableCell>
                       <div>
-                        <div className="font-medium">{transfer.item}</div>
-                        <div className="text-sm text-muted-foreground">{transfer.sku}</div>
+                        <div className="font-medium">{transfer.item?.name}</div>
+                        <div className="text-sm text-muted-foreground">{transfer.item?.sku}</div>
                       </div>
                     </TableCell>
                     <TableCell>{transfer.quantity}</TableCell>
                     <TableCell>
                       <div className="flex items-center space-x-2">
-                        <span className="text-sm">{transfer.fromWarehouse}</span>
+                        <span className="text-sm">{transfer.fromWarehouse?.name}</span>
                         <ArrowRight className="h-3 w-3 text-muted-foreground" />
-                        <span className="text-sm">{transfer.toWarehouse}</span>
+                        <span className="text-sm">{transfer.toWarehouse?.name}</span>
                       </div>
                     </TableCell>
-                    <TableCell>{transfer.requestedBy}</TableCell>
+                    <TableCell>{transfer.requestedBy?.name}</TableCell>
                     <TableCell>{getStatusBadge(transfer.status)}</TableCell>
-                    <TableCell>{transfer.requestDate}</TableCell>
+                    <TableCell>{new Date(transfer.requestDate).toISOString().split("T")[0]}</TableCell>
                     <TableCell>
-                      <Button variant="ghost" size="sm">
-                        <Eye className="h-4 w-4" />
-                      </Button>
+                      <div className="flex gap-2">
+                        <Button variant="ghost" size="sm">
+                          <Eye className="h-4 w-4" />
+                        </Button>
+                        {hasPermission(user?.role, "transfers", "approve") && transfer.status === "PENDING" && (
+                          <Button variant="ghost" size="sm" onClick={() => handleApprove(transfer.id)}>
+                            Approve
+                          </Button>
+                        )}
+                      </div>
                     </TableCell>
                   </TableRow>
                 ))}
@@ -427,6 +403,7 @@ export default function TransfersPage() {
           </CardContent>
         </Card>
       </div>
-    </MainLayout>
+      </MainLayout>
+    </ProtectedRoute>
   )
 }
