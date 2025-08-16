@@ -10,14 +10,21 @@ import { TechnicianDashboard } from "@/components/dashboards/technician-dashboar
 import { AuditorDashboard } from "@/components/dashboards/auditor-dashboard"
 
 export default function DashboardPage() {
-  const { user, dashboardType: userDashboardType } = useAuth()
+  const { user } = useAuth()
   const [dashboardType, setDashboardType] = useState<string>("clerk")
 
   useEffect(() => {
-    if (user && userDashboardType) {
-      setDashboardType(userDashboardType)
+    if (user?.role) {
+      const roleMap: Record<string, string> = {
+        ADMIN: "admin",
+        WAREHOUSE_MANAGER: "manager",
+        INVENTORY_CLERK: "clerk",
+        TECHNICIAN: "technician",
+        AUDITOR: "auditor",
+      }
+      setDashboardType(roleMap[user.role] ?? "clerk")
     }
-  }, [user, userDashboardType])
+  }, [user?.role])
 
   const renderDashboard = () => {
     switch (dashboardType) {

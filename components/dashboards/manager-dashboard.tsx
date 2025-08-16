@@ -26,8 +26,15 @@ export function ManagerDashboard() {
         apiClient.getDashboardStats(),
         apiClient.getTransfers({ status: "PENDING" }),
       ])
-
-      setStats(statsData)
+      // Normalize stats from API shape
+      setStats({
+        warehouseItems: statsData.stats?.totalItems ?? 0,
+        lowStockItems: statsData.stats?.lowStockItems ?? 0,
+        pendingTransfers: statsData.stats?.pendingTransfers ?? 0,
+        teamMembers: statsData.stats?.totalUsers ?? 0,
+        monthlyMovements: statsData.stats?.monthlyMovements ?? 0,
+        warehouseCapacity: statsData.warehouseStats?.[0]?.utilization ?? 0,
+      })
       setPendingTransfers(transfersData)
     } catch (error) {
       console.error("Failed to fetch dashboard data:", error)
