@@ -1,15 +1,19 @@
 import { type NextRequest, NextResponse } from "next/server"
 import { prisma } from "@/lib/prisma"
-import { withAuth } from "@/lib/middleware"
+import { withAuthorization, type AuthenticatedRequest } from "@/lib/middleware"
 
 // POST /api/transfers/[id]/approve
-export const POST = withAuth(async (request: NextRequest & { user: any }, { params }: { params: { id: string } }) => {
+export const POST = withAuthorization("transfers", "approve", async (request: AuthenticatedRequest, { params }: { params: { id: string } }) => {
   try {
+    const { user } = request
+
     // Get transfer details
     const transfer = await prisma.stockTransfer.findUnique({
       where: { id: params.id },
       include: {
         item: true,
+        fromWarehouse: true,
+        toWarehouse: true,
       },
     })
 
@@ -19,6 +23,14 @@ export const POST = withAuth(async (request: NextRequest & { user: any }, { para
 
     if (transfer.status !== "PENDING") {
       return NextResponse.json({ error: "Transfer is not pending approval" }, { status: 400 })
+    }
+
+    // Check warehouse access for approval
+    if (user.warehouseId && user.role !== "ADMIN") {
+      // Non-admin users can only approve transfers from their warehouse
+      if (transfer.fromWarehouseId !== user.warehouseId) {
+        return NextResponse.json({ error: "You can only approve transfers from your assigned warehouse" }, { status: 403 })
+      }
     }
 
     // Check if item still has sufficient quantity
@@ -31,22 +43,13 @@ export const POST = withAuth(async (request: NextRequest & { user: any }, { para
     }
 
     // Use transaction to ensure data consistency
-    const result = await prisma.$transaction(async (tx: {
-            stockTransfer: { update: (arg0: { where: { id: string }; data: { status: string; approvedById: any; approvedDate: Date }; include: { item: { select: { id: boolean; name: boolean; sku: boolean } }; fromWarehouse: { select: { id: boolean; name: boolean } }; toWarehouse: { select: { id: boolean; name: boolean } }; requestedBy: { select: { id: boolean; name: boolean } }; approvedBy: { select: { id: boolean; name: boolean } } } }) => any }; inventoryItem: {
-                update: (arg0: { where: { id: any } | { id: any }; data: { quantity: { decrement: any } } | { quantity: { increment: any } } }) => any; findFirst: (arg0: { where: { sku: any; warehouseId: any } }) => any; create: (arg0: {
-                    data: {
-                        name: any; description: any; sku: string // Make SKU unique
-                        barcode: any; quantity: any; minStock: any; maxStock: any; unitPrice: any; supplier: any; categoryId: any; warehouseId: any; status: string
-                    }
-                }) => any
-            }
-        }) => {
+    const result = await prisma.$transaction(async (tx: any) => {
       // Update transfer status
       const updatedTransfer = await tx.stockTransfer.update({
         where: { id: params.id },
         data: {
           status: "APPROVED",
-          approvedById: request.user.userId,
+          approvedById: user.userId,
           approvedDate: new Date(),
         },
         include: {

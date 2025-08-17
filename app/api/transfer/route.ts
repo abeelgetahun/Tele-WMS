@@ -1,11 +1,12 @@
 import { type NextRequest, NextResponse } from "next/server"
 import { prisma } from "@/lib/prisma"
-import { withAuth } from "@/lib/middleware"
+import { withReadAccess, withAuthorization, type AuthenticatedRequest } from "@/lib/middleware"
 import { stockTransferSchema } from "@/lib/validators"
 
 // GET /api/transfers
-export async function GET(request: NextRequest) {
+export const GET = withReadAccess("transfers", async (request: AuthenticatedRequest) => {
   try {
+    const { user } = request
     const { searchParams } = new URL(request.url)
     const status = searchParams.get("status")
     const warehouseId = searchParams.get("warehouseId")
@@ -13,7 +14,16 @@ export async function GET(request: NextRequest) {
     // Build where clause
     const where: any = {}
     if (status && status !== "all") where.status = status
-    if (warehouseId) {
+    
+    // Apply warehouse filtering based on user role
+    if (user.warehouseId && user.role !== "ADMIN" && user.role !== "AUDITOR" && user.role !== "TECHNICIAN") {
+      // Warehouse-scoped users can only see transfers involving their warehouse
+      where.OR = [{ fromWarehouseId: user.warehouseId }, { toWarehouseId: user.warehouseId }]
+    } else if (warehouseId) {
+      // If specific warehouse is requested, check access
+      if (user.role !== "ADMIN" && user.role !== "AUDITOR" && user.role !== "TECHNICIAN" && user.warehouseId !== warehouseId) {
+        return NextResponse.json({ error: "Access denied to this warehouse" }, { status: 403 })
+      }
       where.OR = [{ fromWarehouseId: warehouseId }, { toWarehouseId: warehouseId }]
     }
 
@@ -60,15 +70,24 @@ export async function GET(request: NextRequest) {
     console.error("Get transfers error:", error)
     return NextResponse.json({ error: "Failed to fetch transfers" }, { status: 500 })
   }
-}
+})
 
-// POST /api/transfers
-export const POST = withAuth(async (request: NextRequest & { user: any }) => {
+// POST /api/transfers - Only managers and admins can create transfers
+export const POST = withAuthorization("transfers", "create", async (request: AuthenticatedRequest) => {
   try {
+    const { user } = request
     const body = await request.json()
 
     // Validate input
     const validatedData = stockTransferSchema.parse(body)
+
+    // Warehouse access validation for non-admin users
+    if (user.warehouseId && user.role !== "ADMIN") {
+      // Non-admin users can only create transfers from their assigned warehouse
+      if (validatedData.fromWarehouseId !== user.warehouseId) {
+        return NextResponse.json({ error: "You can only create transfers from your assigned warehouse" }, { status: 403 })
+      }
+    }
 
     // Check if item exists and has sufficient quantity
     const item = await prisma.inventoryItem.findUnique({
@@ -99,7 +118,7 @@ export const POST = withAuth(async (request: NextRequest & { user: any }) => {
     const transfer = await prisma.stockTransfer.create({
       data: {
         ...validatedData,
-        requestedById: request.user.userId,
+        requestedById: user.userId,
         status: "PENDING",
       },
       include: {
