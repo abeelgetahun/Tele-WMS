@@ -13,6 +13,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { ArrowLeft, Save } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
+import { useAuth } from "@/context/auth-context"
 import { apiClient } from "@/lib/api-client"
 
 const suppliers = [
@@ -27,6 +28,7 @@ const suppliers = [
 export default function AddInventoryPage() {
   const router = useRouter()
   const { toast } = useToast()
+  const { user } = useAuth()
   const [categories, setCategories] = useState<{ id: string; name: string }[]>([])
   const [warehouses, setWarehouses] = useState<{ id: string; name: string }[]>([])
   const [loading, setLoading] = useState(true)
@@ -50,20 +52,42 @@ export default function AddInventoryPage() {
     const load = async () => {
       try {
         setLoading(true)
-        const [cats, whs] = (await Promise.all([apiClient.getCategories(), apiClient.getWarehouses()])) as [
-          any[],
-          any[],
-        ]
+        
+        // Load categories
+        const cats = await apiClient.getCategories()
         setCategories(cats.map((c: any) => ({ id: c.id, name: c.name })))
-        setWarehouses(whs.map((w: any) => ({ id: w.id, name: w.name })))
-      } catch (e) {
-        // ignore, toast below on submit if needed
+        
+        // Load warehouses based on user role
+        if (user?.role === "ADMIN") {
+          // Admin can see all warehouses
+          const whs = await apiClient.getWarehouses()
+          setWarehouses(whs.map((w: any) => ({ id: w.id, name: w.name })))
+        } else if (user?.warehouseId) {
+          // Non-admin users can only see their assigned warehouse
+          const whs = await apiClient.getWarehouses()
+          const userWarehouse = whs.find((w: any) => w.id === user.warehouseId)
+          if (userWarehouse) {
+            setWarehouses([{ id: userWarehouse.id, name: userWarehouse.name }])
+            // Auto-assign warehouse for non-admin users
+            setFormData(prev => ({ ...prev, warehouseId: user.warehouseId! }))
+          }
+        }
+      } catch (error) {
+        console.error("Failed to load data:", error)
+        toast({
+          title: "Error",
+          description: "Failed to load categories and warehouses. Please try again.",
+          variant: "destructive",
+        })
       } finally {
         setLoading(false)
       }
     }
-    load()
-  }, [])
+    
+    if (user) {
+      load()
+    }
+  }, [user, toast])
 
   const handleInputChange = (field: string, value: string) => {
     setFormData((prev) => ({
@@ -83,8 +107,19 @@ export default function AddInventoryPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
 
-    // Validate required fields
-    const requiredFields = ["name", "categoryId", "sku", "warehouseId", "quantity", "unitPrice", "supplier"]
+    // Ensure warehouse is set for non-admin users
+    if (user?.role !== "ADMIN" && user?.warehouseId && !formData.warehouseId) {
+      setFormData(prev => ({ ...prev, warehouseId: user.warehouseId! }))
+    }
+
+    // Validate required fields based on user role
+    const requiredFields = ["name", "categoryId", "sku", "quantity", "unitPrice", "supplier"]
+    
+    // Only require warehouseId for admin users (non-admin users have it auto-assigned)
+    if (user?.role === "ADMIN") {
+      requiredFields.push("warehouseId")
+    }
+    
     const missingFields = requiredFields.filter((field) => !formData[field as keyof typeof formData])
 
     if (missingFields.length > 0) {
@@ -97,6 +132,9 @@ export default function AddInventoryPage() {
     }
 
     try {
+      // Ensure warehouseId is set for non-admin users
+      const warehouseId = user?.role === "ADMIN" ? formData.warehouseId : user?.warehouseId
+
       await apiClient.createInventoryItem({
         name: formData.name,
         description: formData.description || undefined,
@@ -108,13 +146,27 @@ export default function AddInventoryPage() {
         unitPrice: Number(formData.unitPrice),
         supplier: formData.supplier || undefined,
         categoryId: formData.categoryId,
-        warehouseId: formData.warehouseId,
+        warehouseId: warehouseId!,
       })
       toast({ title: "Item Added Successfully", description: `${formData.name} has been added to inventory.` })
       router.push("/inventory")
     } catch (err: any) {
       toast({ title: "Error", description: err?.message || "Failed to create item", variant: "destructive" })
     }
+  }
+
+  // Show loading state
+  if (loading) {
+    return (
+      <MainLayout>
+        <div className="flex items-center justify-center h-64">
+          <div className="text-center">
+            <h2 className="text-2xl font-bold mb-2">Loading...</h2>
+            <p className="text-muted-foreground">Please wait while we load the form data.</p>
+          </div>
+        </div>
+      </MainLayout>
+    )
   }
 
   return (
@@ -128,7 +180,10 @@ export default function AddInventoryPage() {
           </Button>
           <div>
             <h1 className="text-3xl font-bold tracking-tight">Add New Inventory Item</h1>
-            <p className="text-muted-foreground">Add a new item to the warehouse inventory system</p>
+            <p className="text-muted-foreground">
+              Add a new item to the warehouse inventory system
+              {user?.warehouse && ` - ${user.warehouse.name}`}
+            </p>
           </div>
         </div>
 
@@ -158,10 +213,10 @@ export default function AddInventoryPage() {
                       <Select
                         value={formData.categoryId}
                         onValueChange={(value) => handleInputChange("categoryId", value)}
-                        disabled={loading}
+                        disabled={loading || categories.length === 0}
                       >
                         <SelectTrigger>
-                          <SelectValue placeholder="Select category" />
+                          <SelectValue placeholder={categories.length === 0 ? "No categories available" : "Select category"} />
                         </SelectTrigger>
                         <SelectContent>
                           {categories.map((category) => (
@@ -171,6 +226,9 @@ export default function AddInventoryPage() {
                           ))}
                         </SelectContent>
                       </Select>
+                      {categories.length === 0 && (
+                        <p className="text-sm text-muted-foreground">No categories available. Please contact an administrator.</p>
+                      )}
                     </div>
                   </div>
 
@@ -196,10 +254,18 @@ export default function AddInventoryPage() {
                           placeholder="Enter SKU"
                           required
                         />
-                        <Button type="button" variant="outline" onClick={generateSKU}>
+                        <Button 
+                          type="button" 
+                          variant="outline" 
+                          onClick={generateSKU}
+                          disabled={!formData.categoryId}
+                        >
                           Generate
                         </Button>
                       </div>
+                      {!formData.categoryId && (
+                        <p className="text-sm text-muted-foreground">Select a category first to generate SKU</p>
+                      )}
                     </div>
                     <div className="space-y-2">
                       <Label htmlFor="barcode">Barcode</Label>
@@ -223,25 +289,28 @@ export default function AddInventoryPage() {
                   <CardDescription>Set stock levels and pricing</CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="warehouse">Warehouse *</Label>
-                    <Select
-                      value={formData.warehouseId}
-                      onValueChange={(value) => handleInputChange("warehouseId", value)}
-                      disabled={loading}
-                    >
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select warehouse" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {warehouses.map((warehouse) => (
-                          <SelectItem key={warehouse.id} value={warehouse.id}>
-                            {warehouse.name}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
+                  {/* Warehouse selection - only show for admins */}
+                  {user?.role === "ADMIN" && (
+                    <div className="space-y-2">
+                      <Label htmlFor="warehouse">Warehouse *</Label>
+                      <Select
+                        value={formData.warehouseId}
+                        onValueChange={(value) => handleInputChange("warehouseId", value)}
+                        disabled={loading || warehouses.length === 0}
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder={warehouses.length === 0 ? "No warehouses available" : "Select warehouse"} />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {warehouses.map((warehouse) => (
+                            <SelectItem key={warehouse.id} value={warehouse.id}>
+                              {warehouse.name}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  )}
 
                   <div className="space-y-2">
                     <Label htmlFor="quantity">Initial Quantity *</Label>
@@ -351,7 +420,7 @@ export default function AddInventoryPage() {
             <Button type="button" variant="outline" onClick={() => router.back()}>
               Cancel
             </Button>
-            <Button type="submit">
+            <Button type="submit" disabled={loading}>
               <Save className="mr-2 h-4 w-4" />
               Add Item
             </Button>
