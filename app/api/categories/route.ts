@@ -1,6 +1,6 @@
 import { type NextRequest, NextResponse } from "next/server"
 import { prisma } from "@/lib/prisma"
-import { withAuth } from "@/lib/middleware"
+import { withReadAccess, withAuthorization, type AuthenticatedRequest } from "@/lib/middleware"
 import { z } from "zod"
 
 const categorySchema = z.object({
@@ -9,7 +9,7 @@ const categorySchema = z.object({
 })
 
 // GET /api/categories
-export async function GET() {
+export const GET = withReadAccess("categories", async (request: AuthenticatedRequest) => {
   try {
     const categories = await prisma.category.findMany({
       include: {
@@ -27,10 +27,10 @@ export async function GET() {
     console.error("Get categories error:", error)
     return NextResponse.json({ error: "Failed to fetch categories" }, { status: 500 })
   }
-}
+})
 
 // POST /api/categories
-export const POST = withAuth(async (request: NextRequest & { user: any }) => {
+export const POST = withAuthorization("categories", "create", async (request: AuthenticatedRequest) => {
   try {
     const body = await request.json()
 

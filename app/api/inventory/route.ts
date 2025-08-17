@@ -1,11 +1,12 @@
 import { type NextRequest, NextResponse } from "next/server"
 import { prisma } from "@/lib/prisma"
-import { withAuth } from "@/lib/middleware"
+import { withReadAccess, withInventoryManagement, type AuthenticatedRequest } from "@/lib/middleware"
 import { inventoryItemSchema } from "@/lib/validators"
 
 // GET /api/inventory
-export async function GET(request: NextRequest) {
+export const GET = withReadAccess("inventory", async (request: AuthenticatedRequest) => {
   try {
+    const { user } = request
     const { searchParams } = new URL(request.url)
     const warehouseId = searchParams.get("warehouseId")
     const categoryId = searchParams.get("categoryId")
@@ -14,7 +15,19 @@ export async function GET(request: NextRequest) {
 
     // Build where clause
     const where: any = {}
-    if (warehouseId) where.warehouseId = warehouseId
+    
+    // Apply warehouse filtering based on user role
+    if (user.warehouseId && user.role !== "ADMIN" && user.role !== "AUDITOR" && user.role !== "TECHNICIAN") {
+      // Warehouse-scoped users can only see their warehouse inventory
+      where.warehouseId = user.warehouseId
+    } else if (warehouseId) {
+      // If specific warehouse is requested, check access
+      if (user.role !== "ADMIN" && user.role !== "AUDITOR" && user.role !== "TECHNICIAN" && user.warehouseId !== warehouseId) {
+        return NextResponse.json({ error: "Access denied to this warehouse" }, { status: 403 })
+      }
+      where.warehouseId = warehouseId
+    }
+    
     if (categoryId) where.categoryId = categoryId
     if (search) {
       where.OR = [
@@ -60,11 +73,12 @@ export async function GET(request: NextRequest) {
     console.error("Get inventory error:", error)
     return NextResponse.json({ error: "Failed to fetch inventory" }, { status: 500 })
   }
-}
+})
 
 // POST /api/inventory
-export const POST = withAuth(async (request: NextRequest & { user: any }) => {
+export const POST = withInventoryManagement(async (request: AuthenticatedRequest) => {
   try {
+    const { user } = request
     const body = await request.json()
 
     // Validate input
@@ -77,6 +91,19 @@ export const POST = withAuth(async (request: NextRequest & { user: any }) => {
 
     if (existingItem) {
       return NextResponse.json({ error: "SKU already exists" }, { status: 400 })
+    }
+
+    // Warehouse assignment validation
+    if (user.warehouseId && user.role !== "ADMIN") {
+      // Non-admin users can only create items in their assigned warehouse
+      if (validatedData.warehouseId && validatedData.warehouseId !== user.warehouseId) {
+        return NextResponse.json({ error: "You can only create inventory items in your assigned warehouse" }, { status: 403 })
+      }
+      
+      // Auto-assign to user's warehouse if not specified
+      if (!validatedData.warehouseId) {
+        validatedData.warehouseId = user.warehouseId
+      }
     }
 
     // Determine initial status based on quantity
