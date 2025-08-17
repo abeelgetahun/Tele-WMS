@@ -6,14 +6,14 @@ import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { useAuth } from "@/context/auth-context"
 import { apiClient } from "@/lib/api-client"
-import { Package, Plus, ArrowLeftRight, AlertTriangle, Clock } from "lucide-react"
+import { Package, Plus, AlertTriangle, Clock, Eye } from "lucide-react"
 import Link from "next/link"
 
 export function ClerkDashboard() {
   const { user } = useAuth()
   const [stats, setStats] = useState<any>(null)
   const [recentItems, setRecentItems] = useState<any[]>([])
-  const [myTransfers, setMyTransfers] = useState<any[]>([])
+  const [lowStockItems, setLowStockItems] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
@@ -24,25 +24,21 @@ export function ClerkDashboard() {
     try {
       setLoading(true)
 
-      const [inventoryData, transfersData] = await Promise.all([
-        apiClient.getInventory({ warehouseId: user?.warehouseId }),
-        apiClient.getTransfers({ warehouseId: user?.warehouseId }),
-      ])
+      const inventoryData = await apiClient.getInventory({ warehouseId: user?.warehouseId })
 
       // Calculate stats
-      const lowStockItems = inventoryData.filter((item: any) => item.quantity <= item.minStock).length
-
-      const outOfStockItems = inventoryData.filter((item: any) => item.quantity === 0).length
+      const lowStockItems = inventoryData.filter((item: any) => item.quantity <= item.minStock)
+      const outOfStockItems = inventoryData.filter((item: any) => item.quantity === 0)
 
       setStats({
         totalItems: inventoryData.length,
-        lowStockItems,
-        outOfStockItems,
-        pendingTransfers: transfersData.filter((t: any) => t.status === "PENDING").length,
+        lowStockItems: lowStockItems.length,
+        outOfStockItems: outOfStockItems.length,
+        categories: [...new Set(inventoryData.map((item: any) => item.category?.name))].length,
       })
 
       setRecentItems(inventoryData.slice(0, 5))
-      setMyTransfers(transfersData.slice(0, 5))
+      setLowStockItems(lowStockItems.slice(0, 5))
     } catch (error) {
       console.error("Failed to fetch dashboard data:", error)
       // Fallback data
@@ -50,10 +46,10 @@ export function ClerkDashboard() {
         totalItems: 125,
         lowStockItems: 8,
         outOfStockItems: 3,
-        pendingTransfers: 2,
+        categories: 12,
       })
       setRecentItems([])
-      setMyTransfers([])
+      setLowStockItems([])
     } finally {
       setLoading(false)
     }
@@ -85,10 +81,10 @@ export function ClerkDashboard() {
               Add Item
             </Button>
           </Link>
-          <Link href="/transfers">
+          <Link href="/inventory">
             <Button variant="outline">
-              <ArrowLeftRight className="h-4 w-4 mr-2" />
-              New Transfer
+              <Eye className="h-4 w-4 mr-2" />
+              View All
             </Button>
           </Link>
         </div>
@@ -131,12 +127,12 @@ export function ClerkDashboard() {
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Pending Transfers</CardTitle>
-            <Clock className="h-4 w-4 text-blue-500" />
+            <CardTitle className="text-sm font-medium">Categories</CardTitle>
+            <Package className="h-4 w-4 text-blue-500" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-blue-600">{stats?.pendingTransfers || 0}</div>
-            <p className="text-xs text-muted-foreground">Your requests</p>
+            <div className="text-2xl font-bold text-blue-600">{stats?.categories || 0}</div>
+            <p className="text-xs text-muted-foreground">Item categories</p>
           </CardContent>
         </Card>
       </div>
@@ -145,7 +141,7 @@ export function ClerkDashboard() {
       <Card>
         <CardHeader>
           <CardTitle>Quick Actions</CardTitle>
-          <CardDescription>Common daily tasks</CardDescription>
+          <CardDescription>Common daily inventory tasks</CardDescription>
         </CardHeader>
         <CardContent>
           <div className="grid gap-4 md:grid-cols-3">
@@ -155,16 +151,16 @@ export function ClerkDashboard() {
                 Add New Item
               </Button>
             </Link>
-            <Link href="/transfers">
-              <Button variant="outline" className="w-full h-20 flex flex-col bg-transparent">
-                <ArrowLeftRight className="h-6 w-6 mb-2" />
-                Request Transfer
-              </Button>
-            </Link>
             <Link href="/inventory">
               <Button variant="outline" className="w-full h-20 flex flex-col bg-transparent">
                 <Package className="h-6 w-6 mb-2" />
                 Update Stock
+              </Button>
+            </Link>
+            <Link href="/inventory">
+              <Button variant="outline" className="w-full h-20 flex flex-col bg-transparent">
+                <Eye className="h-6 w-6 mb-2" />
+                View Inventory
               </Button>
             </Link>
           </div>
@@ -205,34 +201,24 @@ export function ClerkDashboard() {
 
         <Card>
           <CardHeader>
-            <CardTitle>My Transfer Requests</CardTitle>
-            <CardDescription>Your recent transfer requests</CardDescription>
+            <CardTitle>Low Stock Alerts</CardTitle>
+            <CardDescription>Items that need restocking</CardDescription>
           </CardHeader>
           <CardContent>
-            {myTransfers.length === 0 ? (
-              <p className="text-muted-foreground">No recent transfers</p>
+            {lowStockItems.length === 0 ? (
+              <p className="text-muted-foreground">No low stock items</p>
             ) : (
               <div className="space-y-3">
-                {myTransfers.map((transfer) => (
-                  <div key={transfer.id} className="flex items-center justify-between">
+                {lowStockItems.map((item) => (
+                  <div key={item.id} className="flex items-center justify-between">
                     <div>
-                      <p className="font-medium">{transfer.item?.name}</p>
+                      <p className="font-medium">{item.name}</p>
                       <p className="text-sm text-muted-foreground">
-                        {transfer.quantity} units to {transfer.toWarehouse?.name}
+                        Min: {item.minStock} | Current: {item.quantity}
                       </p>
                     </div>
-                    <Badge
-                      variant={
-                        transfer.status === "PENDING"
-                          ? "secondary"
-                          : transfer.status === "APPROVED"
-                            ? "default"
-                            : transfer.status === "COMPLETED"
-                              ? "default"
-                              : "destructive"
-                      }
-                    >
-                      {transfer.status}
+                    <Badge variant={item.quantity === 0 ? "destructive" : "secondary"}>
+                      {item.quantity === 0 ? "Out of Stock" : "Low Stock"}
                     </Badge>
                   </div>
                 ))}

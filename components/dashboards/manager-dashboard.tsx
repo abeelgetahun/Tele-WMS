@@ -5,12 +5,14 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button"
 import { useAuth } from "@/context/auth-context"
 import { apiClient } from "@/lib/api-client"
-import { Package, AlertTriangle, Users, CheckCircle, Clock, TrendingUp } from "lucide-react"
+import { Package, AlertTriangle, Users, CheckCircle, Clock, TrendingUp, Plus, ArrowLeftRight } from "lucide-react"
+import Link from "next/link"
 
 export function ManagerDashboard() {
   const { user } = useAuth()
   const [stats, setStats] = useState<any>(null)
   const [pendingTransfers, setPendingTransfers] = useState<any[]>([])
+  const [warehouseUsers, setWarehouseUsers] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
@@ -22,32 +24,43 @@ export function ManagerDashboard() {
       setLoading(true)
 
       // Fetch warehouse-specific data
-      const [statsData, transfersData] = await Promise.all([
-        apiClient.getDashboardStats(),
-        apiClient.getTransfers({ status: "PENDING" }),
+      const [inventoryData, transfersData, usersData] = await Promise.all([
+        apiClient.getInventory({ warehouseId: user?.warehouseId }),
+        apiClient.getTransfers({ warehouseId: user?.warehouseId, status: "PENDING" }),
+        apiClient.getUsers({ warehouseId: user?.warehouseId }),
       ])
-      // Normalize stats from API shape
+
+      // Calculate stats
+      const lowStockItems = inventoryData.filter((item: any) => item.quantity <= item.minStock).length
+      const outOfStockItems = inventoryData.filter((item: any) => item.quantity === 0).length
+      const totalValue = inventoryData.reduce((sum: number, item: any) => sum + (item.quantity * parseFloat(item.unitPrice)), 0)
+
       setStats({
-        warehouseItems: statsData.stats?.totalItems ?? 0,
-        lowStockItems: statsData.stats?.lowStockItems ?? 0,
-        pendingTransfers: statsData.stats?.pendingTransfers ?? 0,
-        teamMembers: statsData.stats?.totalUsers ?? 0,
-        monthlyMovements: statsData.stats?.monthlyMovements ?? 0,
-        warehouseCapacity: statsData.warehouseStats?.[0]?.utilization ?? 0,
+        warehouseItems: inventoryData.length,
+        lowStockItems,
+        outOfStockItems,
+        teamMembers: usersData.length,
+        pendingTransfers: transfersData.length,
+        totalValue: totalValue.toFixed(2),
+        warehouseCapacity: Math.round((inventoryData.length / 1000) * 100), // Mock calculation
       })
-      setPendingTransfers(transfersData)
+      
+      setPendingTransfers(transfersData.slice(0, 5))
+      setWarehouseUsers(usersData.slice(0, 5))
     } catch (error) {
       console.error("Failed to fetch dashboard data:", error)
       // Fallback data
       setStats({
         warehouseItems: 450,
         lowStockItems: 12,
-        pendingTransfers: 5,
+        outOfStockItems: 3,
         teamMembers: 8,
-        monthlyMovements: 156,
+        pendingTransfers: 5,
+        totalValue: "125,000.00",
         warehouseCapacity: 85,
       })
       setPendingTransfers([])
+      setWarehouseUsers([])
     } finally {
       setLoading(false)
     }
@@ -76,9 +89,25 @@ export function ManagerDashboard() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div>
-        <h1 className="text-3xl font-bold tracking-tight">Manager Dashboard</h1>
-        <p className="text-muted-foreground">{user?.warehouse?.name || "Warehouse"} Management Overview</p>
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-3xl font-bold tracking-tight">Manager Dashboard</h1>
+          <p className="text-muted-foreground">{user?.warehouse?.name || "Warehouse"} Management Overview</p>
+        </div>
+        <div className="flex space-x-2">
+          <Link href="/users">
+            <Button>
+              <Users className="h-4 w-4 mr-2" />
+              Manage Staff
+            </Button>
+          </Link>
+          <Link href="/transfers">
+            <Button variant="outline">
+              <ArrowLeftRight className="h-4 w-4 mr-2" />
+              View Transfers
+            </Button>
+          </Link>
+        </div>
       </div>
 
       {/* Stats Cards */}
@@ -111,7 +140,7 @@ export function ManagerDashboard() {
             <Clock className="h-4 w-4 text-blue-500" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-blue-600">{pendingTransfers.length}</div>
+            <div className="text-2xl font-bold text-blue-600">{stats?.pendingTransfers || 0}</div>
             <p className="text-xs text-muted-foreground">Transfer requests</p>
           </CardContent>
         </Card>
@@ -128,6 +157,42 @@ export function ManagerDashboard() {
         </Card>
       </div>
 
+      {/* Quick Actions */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Quick Actions</CardTitle>
+          <CardDescription>Common management tasks</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="grid gap-4 md:grid-cols-4">
+            <Link href="/users">
+              <Button variant="outline" className="w-full h-20 flex flex-col bg-transparent">
+                <Users className="h-6 w-6 mb-2" />
+                Manage Staff
+              </Button>
+            </Link>
+            <Link href="/inventory">
+              <Button variant="outline" className="w-full h-20 flex flex-col bg-transparent">
+                <Package className="h-6 w-6 mb-2" />
+                View Inventory
+              </Button>
+            </Link>
+            <Link href="/transfers">
+              <Button variant="outline" className="w-full h-20 flex flex-col bg-transparent">
+                <ArrowLeftRight className="h-6 w-6 mb-2" />
+                Manage Transfers
+              </Button>
+            </Link>
+            <Link href="/reports">
+              <Button variant="outline" className="w-full h-20 flex flex-col bg-transparent">
+                <TrendingUp className="h-6 w-6 mb-2" />
+                Generate Reports
+              </Button>
+            </Link>
+          </div>
+        </CardContent>
+      </Card>
+
       {/* Pending Transfers */}
       <Card>
         <CardHeader>
@@ -139,7 +204,7 @@ export function ManagerDashboard() {
             <p className="text-muted-foreground">No pending transfers</p>
           ) : (
             <div className="space-y-4">
-              {pendingTransfers.slice(0, 5).map((transfer) => (
+              {pendingTransfers.map((transfer) => (
                 <div key={transfer.id} className="flex items-center justify-between p-4 border rounded-lg">
                   <div className="space-y-1">
                     <p className="font-medium">{transfer.item?.name}</p>
@@ -161,18 +226,46 @@ export function ManagerDashboard() {
         </CardContent>
       </Card>
 
+      {/* Team Members */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Team Members</CardTitle>
+          <CardDescription>Staff in your warehouse</CardDescription>
+        </CardHeader>
+        <CardContent>
+          {warehouseUsers.length === 0 ? (
+            <p className="text-muted-foreground">No team members found</p>
+          ) : (
+            <div className="space-y-4">
+              {warehouseUsers.map((teamMember) => (
+                <div key={teamMember.id} className="flex items-center justify-between p-4 border rounded-lg">
+                  <div className="space-y-1">
+                    <p className="font-medium">{teamMember.name}</p>
+                    <p className="text-sm text-muted-foreground">{teamMember.email}</p>
+                    <p className="text-xs text-muted-foreground capitalize">{teamMember.role.toLowerCase().replace('_', ' ')}</p>
+                  </div>
+                  <div className="text-right">
+                    <p className="text-sm font-medium">{teamMember.isActive ? "Active" : "Inactive"}</p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
       {/* Performance Metrics */}
       <div className="grid gap-4 md:grid-cols-2">
         <Card>
           <CardHeader>
-            <CardTitle>Monthly Movements</CardTitle>
-            <CardDescription>Inventory movements this month</CardDescription>
+            <CardTitle>Inventory Value</CardTitle>
+            <CardDescription>Total value of warehouse inventory</CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{stats?.monthlyMovements || 0}</div>
+            <div className="text-2xl font-bold">${stats?.totalValue || "0.00"}</div>
             <p className="text-xs text-muted-foreground flex items-center">
               <TrendingUp className="h-3 w-3 mr-1 text-green-500" />
-              +12% from last month
+              Current value
             </p>
           </CardContent>
         </Card>
