@@ -1,12 +1,33 @@
 import { type NextRequest, NextResponse } from "next/server"
 import { prisma } from "@/lib/prisma"
-import { withAuth } from "@/lib/middleware"
+import { withReadAccess, withWarehouseManagement, type AuthenticatedRequest } from "@/lib/middleware"
 import { warehouseSchema } from "@/lib/validators"
 
 // GET /api/warehouses
-export async function GET() {
+export const GET = withReadAccess("warehouses", async (request: AuthenticatedRequest) => {
   try {
+    const { user } = request
+    const { searchParams } = new URL(request.url)
+    const warehouseId = searchParams.get("warehouseId")
+
+    // Build where clause based on user role
+    const where: any = {}
+    
+    // If user is warehouse-scoped, only show their warehouse
+    if (user.warehouseId && user.role !== "ADMIN" && user.role !== "AUDITOR" && user.role !== "TECHNICIAN") {
+      where.id = user.warehouseId
+    }
+    
+    // If specific warehouse is requested, check access
+    if (warehouseId) {
+      if (user.role !== "ADMIN" && user.role !== "AUDITOR" && user.role !== "TECHNICIAN" && user.warehouseId !== warehouseId) {
+        return NextResponse.json({ error: "Access denied to this warehouse" }, { status: 403 })
+      }
+      where.id = warehouseId
+    }
+
     const warehouses = await prisma.warehouse.findMany({
+      where,
       include: {
         manager: {
           select: {
@@ -45,11 +66,12 @@ export async function GET() {
     console.error("Get warehouses error:", error)
     return NextResponse.json({ error: "Failed to fetch warehouses" }, { status: 500 })
   }
-}
+})
 
 // POST /api/warehouses
-export const POST = withAuth(async (request: NextRequest & { user: any }) => {
+export const POST = withWarehouseManagement(async (request: AuthenticatedRequest) => {
   try {
+    const { user } = request
     const body = await request.json()
 
     // Validate input
