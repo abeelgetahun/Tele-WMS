@@ -24,13 +24,14 @@ class ApiClient {
       }
     }
 
-    if (token && !token.startsWith("manual-token")) {
+    // Send Authorization header for all tokens, including manual tokens
+    if (token) {
       headers["Authorization"] = `Bearer ${token}`
     }
 
     const config: RequestInit = {
       ...options,
-  headers: headers as HeadersInit,
+      headers: headers as HeadersInit,
     }
 
     const response = await fetch(url, config)
@@ -72,19 +73,19 @@ class ApiClient {
   }
 
   async getWarehouses() {
-  return this.get("/warehouse")
+    return this.get("/warehouse")
   }
 
   async createWarehouse(data: any) {
-  return this.post("/warehouse", data)
+    return this.post("/warehouse", data)
   }
 
   async updateWarehouse(id: string, data: any) {
-  return this.put(`/warehouse/${id}`, data)
+    return this.put(`/warehouse/${id}`, data)
   }
 
   async deleteWarehouse(id: string) {
-  return this.delete(`/warehouse/${id}`)
+    return this.delete(`/warehouse/${id}`)
   }
 
   async getInventory(params?: any) {
@@ -106,15 +107,15 @@ class ApiClient {
 
   async getTransfers(params?: any) {
     const query = params ? "?" + new URLSearchParams(params).toString() : ""
-  return this.get(`/transfer${query}`)
+    return this.get(`/transfer${query}`)
   }
 
   async createTransfer(data: any) {
-  return this.post("/transfer", data)
+    return this.post("/transfer", data)
   }
 
   async approveTransfer(id: string) {
-  return this.post(`/transfer/${id}/approve`)
+    return this.post(`/transfer/${id}/approve`)
   }
 
   async getCategories() {
