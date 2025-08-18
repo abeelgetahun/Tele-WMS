@@ -1,10 +1,14 @@
 import { type NextRequest, NextResponse } from "next/server"
 import { prisma } from "@/lib/prisma"
-import { withReadAccess, withInventoryManagement, type AuthenticatedRequest } from "@/lib/middleware"
+import { withAuthorization, withInventoryManagement, type AuthenticatedRequest } from "@/lib/middleware"
 import { inventoryItemSchema } from "@/lib/validators"
+import { ZodError } from "zod"
 
 // GET /api/inventory
-export const GET = withReadAccess("inventory", async (request: AuthenticatedRequest) => {
+export const GET = withAuthorization(
+  "inventory",
+  "read",
+  async (request: AuthenticatedRequest) => {
   try {
     const { user } = request
     const { searchParams } = new URL(request.url)
@@ -51,29 +55,28 @@ export const GET = withReadAccess("inventory", async (request: AuthenticatedRequ
       orderBy: { createdAt: "desc" },
     })
 
-    // Filter by status if provided (calculated field)
+    // Filter by status (use stored status in single-unit model)
     const filteredItems = inventoryItems.filter((item) => {
       if (!status || status === "all") return true
-
-      const itemStatus =
-        item.quantity === 0 ? "OUT_OF_STOCK" : item.quantity <= item.minStock ? "LOW_STOCK" : "IN_STOCK"
-
-      return itemStatus === status
+      return item.status === status
     })
 
-    // Add calculated status to each item
-    const itemsWithStatus = filteredItems.map((item) => ({
-      ...item,
-      calculatedStatus:
-        item.quantity === 0 ? "OUT_OF_STOCK" : item.quantity <= item.minStock ? "LOW_STOCK" : "IN_STOCK",
-    }))
+    // Add calculatedStatus equal to stored status for compatibility
+    const itemsWithStatus = filteredItems.map((item) => ({ ...item, calculatedStatus: item.status }))
 
     return NextResponse.json(itemsWithStatus)
   } catch (error) {
     console.error("Get inventory error:", error)
     return NextResponse.json({ error: "Failed to fetch inventory" }, { status: 500 })
   }
-})
+  },
+  {
+    warehouseIdExtractor: (request) => {
+      const { searchParams } = new URL(request.url)
+      return searchParams.get("warehouseId") || (request as AuthenticatedRequest).user.warehouseId
+    },
+  },
+)
 
 // POST /api/inventory
 export const POST = withInventoryManagement(async (request: AuthenticatedRequest) => {
@@ -106,19 +109,14 @@ export const POST = withInventoryManagement(async (request: AuthenticatedRequest
       }
     }
 
-    // Determine initial status based on quantity
-    const status =
-      validatedData.quantity === 0
-        ? "OUT_OF_STOCK"
-        : validatedData.quantity <= validatedData.minStock
-          ? "LOW_STOCK"
-          : "IN_STOCK"
-
     // Create inventory item
     const inventoryItem = await prisma.inventoryItem.create({
       data: {
-        ...validatedData,
-        status: status as any,
+  ...validatedData,
+  // Single-unit SKU model
+  quantity: 1,
+  status: "IN_STOCK" as any,
+  // Remove legacy fields if present in payload
       },
       include: {
         category: true,
@@ -133,6 +131,10 @@ export const POST = withInventoryManagement(async (request: AuthenticatedRequest
 
     return NextResponse.json(inventoryItem, { status: 201 })
   } catch (error) {
+    if (error instanceof ZodError) {
+      const message = error.issues.map((i) => i.message).join("; ")
+      return NextResponse.json({ error: message }, { status: 400 })
+    }
     console.error("Create inventory item error:", error)
     return NextResponse.json({ error: "Failed to create inventory item" }, { status: 500 })
   }
