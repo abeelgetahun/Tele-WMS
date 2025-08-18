@@ -13,6 +13,7 @@ import {
   BarChart3,
   Settings,
   LayoutDashboard,
+  User as UserIcon,
 } from "lucide-react"
 
 const iconMap = {
@@ -24,6 +25,7 @@ const iconMap = {
   Users: Users,
   BarChart3: BarChart3,
   Settings: Settings,
+  User: UserIcon,
 }
 
 export function Sidebar() {
@@ -72,6 +74,17 @@ export function Sidebar() {
           <div className="mt-6 pt-6 border-t">
             <h3 className="px-4 text-sm font-medium text-muted-foreground mb-2">Quick Actions</h3>
             <div className="space-y-1">
+              {/* Profile accessible to all */}
+              <Link
+                href="/profile"
+                className={cn(
+                  "flex items-center rounded-lg px-3 py-2 text-sm font-medium hover:bg-accent hover:text-accent-foreground",
+                  pathname === "/profile" ? "bg-accent text-accent-foreground" : "transparent",
+                )}
+              >
+                <UserIcon className="mr-2 h-4 w-4" />
+                My Profile
+              </Link>
               {/* Manager-specific actions */}
               {user.role === "WAREHOUSE_MANAGER" && (
                 <>

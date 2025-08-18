@@ -6,14 +6,16 @@ import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { useAuth } from "@/context/auth-context"
 import { apiClient } from "@/lib/api-client"
-import { Package, Plus, AlertTriangle, Clock, Eye } from "lucide-react"
+import { Package, Plus, AlertTriangle, Eye, Folder } from "lucide-react"
 import Link from "next/link"
 
 export function ClerkDashboard() {
   const { user } = useAuth()
   const [stats, setStats] = useState<any>(null)
   const [recentItems, setRecentItems] = useState<any[]>([])
-  const [lowStockItems, setLowStockItems] = useState<any[]>([])
+  const [categoryGroups, setCategoryGroups] = useState<Array<{ category: string; items: any[] }>>([])
+  const [lowStockCategories, setLowStockCategories] = useState<Array<{ category: string; count: number }>>([])
+  const [outOfStockCategories, setOutOfStockCategories] = useState<Array<{ category: string; count: number }>>([])
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
@@ -27,29 +29,36 @@ export function ClerkDashboard() {
       const inventoryData = await apiClient.getInventory({ warehouseId: user?.warehouseId })
 
       // Calculate stats
-      const lowStockItems = inventoryData.filter((item: any) => item.quantity <= item.minStock)
-      const outOfStockItems = inventoryData.filter((item: any) => item.quantity === 0)
+      // Group by category
+      const byCategory = new Map<string, any[]>()
+      for (const item of inventoryData) {
+        const cat = item.category?.name || "Uncategorized"
+        if (!byCategory.has(cat)) byCategory.set(cat, [])
+        byCategory.get(cat)!.push(item)
+      }
+
+  const groups = Array.from(byCategory.entries()).map(([category, items]) => ({ category, items }))
+
+  // Category-level stock states
+  const lowCats = groups.filter((g) => g.items.length > 0 && g.items.length < 10)
+  const outCats = groups.filter((g) => g.items.length === 0)
 
       setStats({
         totalItems: inventoryData.length,
-        lowStockItems: lowStockItems.length,
-        outOfStockItems: outOfStockItems.length,
-        categories: [...new Set(inventoryData.map((item: any) => item.category?.name))].length,
+        lowStockCategories: lowCats.length,
+        categories: groups.length,
       })
 
+      setCategoryGroups(groups.sort((a, b) => a.category.localeCompare(b.category)))
+      setLowStockCategories(lowCats.map((g) => ({ category: g.category, count: g.items.length })))
+      setOutOfStockCategories(outCats.map((g) => ({ category: g.category, count: 0 })))
       setRecentItems(inventoryData.slice(0, 5))
-      setLowStockItems(lowStockItems.slice(0, 5))
     } catch (error) {
       console.error("Failed to fetch dashboard data:", error)
       // Fallback data
-      setStats({
-        totalItems: 125,
-        lowStockItems: 8,
-        outOfStockItems: 3,
-        categories: 12,
-      })
-      setRecentItems([])
-      setLowStockItems([])
+  setStats({ totalItems: 0, lowStockCategories: 0, categories: 0 })
+  setRecentItems([])
+  setCategoryGroups([])
     } finally {
       setLoading(false)
     }
@@ -105,23 +114,12 @@ export function ClerkDashboard() {
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Low Stock</CardTitle>
+            <CardTitle className="text-sm font-medium">Low Stock Categories</CardTitle>
             <AlertTriangle className="h-4 w-4 text-orange-500" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-orange-600">{stats?.lowStockItems || 0}</div>
-            <p className="text-xs text-muted-foreground">Need restocking</p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Out of Stock</CardTitle>
-            <AlertTriangle className="h-4 w-4 text-red-500" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-red-600">{stats?.outOfStockItems || 0}</div>
-            <p className="text-xs text-muted-foreground">Urgent attention</p>
+            <div className="text-2xl font-bold text-orange-600">{stats?.lowStockCategories || 0}</div>
+            <p className="text-xs text-muted-foreground">Categories with {'<'} 10 items</p>
           </CardContent>
         </Card>
 
@@ -167,12 +165,62 @@ export function ClerkDashboard() {
         </CardContent>
       </Card>
 
+      {/* Category Health */}
+      <div className="grid gap-4 md:grid-cols-2">
+        <Card>
+          <CardHeader>
+            <CardTitle>Low-stock Categories</CardTitle>
+            <CardDescription>Categories with 1-9 items</CardDescription>
+          </CardHeader>
+          <CardContent>
+            {lowStockCategories.length === 0 ? (
+              <p className="text-muted-foreground">None</p>
+            ) : (
+              <div className="space-y-2">
+                {lowStockCategories.map((c) => (
+                  <div key={c.category} className="flex items-center justify-between text-sm">
+                    <div className="flex items-center gap-2">
+                      <AlertTriangle className="h-4 w-4 text-orange-500" />
+                      <span>{c.category}</span>
+                    </div>
+                    <Badge variant="secondary">{c.count}</Badge>
+                  </div>
+                ))}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader>
+            <CardTitle>Out-of-stock Categories</CardTitle>
+            <CardDescription>No items available</CardDescription>
+          </CardHeader>
+          <CardContent>
+            {outOfStockCategories.length === 0 ? (
+              <p className="text-muted-foreground">None</p>
+            ) : (
+              <div className="space-y-2">
+                {outOfStockCategories.map((c) => (
+                  <div key={c.category} className="flex items-center justify-between text-sm">
+                    <div className="flex items-center gap-2">
+                      <AlertTriangle className="h-4 w-4 text-red-500" />
+                      <span>{c.category}</span>
+                    </div>
+                    <Badge variant="destructive">0</Badge>
+                  </div>
+                ))}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      </div>
+
       {/* Recent Activity */}
       <div className="grid gap-4 md:grid-cols-2">
         <Card>
           <CardHeader>
             <CardTitle>Recent Items</CardTitle>
-            <CardDescription>Recently added inventory items</CardDescription>
+            <CardDescription>Recently added single-unit SKUs</CardDescription>
           </CardHeader>
           <CardContent>
             {recentItems.length === 0 ? (
@@ -185,13 +233,7 @@ export function ClerkDashboard() {
                       <p className="font-medium">{item.name}</p>
                       <p className="text-sm text-muted-foreground">SKU: {item.sku}</p>
                     </div>
-                    <Badge
-                      variant={
-                        item.quantity === 0 ? "destructive" : item.quantity <= item.minStock ? "secondary" : "default"
-                      }
-                    >
-                      {item.quantity} units
-                    </Badge>
+                    <Badge variant="default">Unit</Badge>
                   </div>
                 ))}
               </div>
@@ -201,27 +243,38 @@ export function ClerkDashboard() {
 
         <Card>
           <CardHeader>
-            <CardTitle>Low Stock Alerts</CardTitle>
-            <CardDescription>Items that need restocking</CardDescription>
+            <CardTitle>Categories</CardTitle>
+            <CardDescription>Browse items by category</CardDescription>
           </CardHeader>
           <CardContent>
-            {lowStockItems.length === 0 ? (
-              <p className="text-muted-foreground">No low stock items</p>
+            {categoryGroups.length === 0 ? (
+              <p className="text-muted-foreground">No items</p>
             ) : (
-              <div className="space-y-3">
-                {lowStockItems.map((item) => (
-                  <div key={item.id} className="flex items-center justify-between">
-                    <div>
-                      <p className="font-medium">{item.name}</p>
-                      <p className="text-sm text-muted-foreground">
-                        Min: {item.minStock} | Current: {item.quantity}
-                      </p>
+              <div className="space-y-4">
+                {categoryGroups.map((group) => {
+                  const isLow = group.items.length < 10
+                  return (
+                    <div key={group.category} className="border rounded-md p-3">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <Folder className="h-4 w-4 text-muted-foreground" />
+                          <p className="font-medium">{group.category}</p>
+                        </div>
+                        <Badge variant={isLow ? "secondary" : "default"}>
+                          {group.items.length} items {isLow && "(low)"}
+                        </Badge>
+                      </div>
+                      <div className="mt-2 grid md:grid-cols-2 gap-2">
+                        {group.items.slice(0, 6).map((i) => (
+                          <div key={i.id} className="flex items-center justify-between text-sm">
+                            <span className="truncate">{i.name}</span>
+                            <span className="text-muted-foreground">{i.sku}</span>
+                          </div>
+                        ))}
+                      </div>
                     </div>
-                    <Badge variant={item.quantity === 0 ? "destructive" : "secondary"}>
-                      {item.quantity === 0 ? "Out of Stock" : "Low Stock"}
-                    </Badge>
-                  </div>
-                ))}
+                  )
+                })}
               </div>
             )}
           </CardContent>

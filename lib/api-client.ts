@@ -126,8 +126,9 @@ class ApiClient {
     return this.post("/categories", data)
   }
 
-  async getUsers() {
-    return this.get("/users")
+  async getUsers(params?: any) {
+    const query = params ? "?" + new URLSearchParams(params).toString() : ""
+    return this.get(`/users${query}`)
   }
 
   async createUser(data: any) {
@@ -140,6 +141,15 @@ class ApiClient {
 
   async deleteUser(id: string) {
     return this.delete(`/users/${id}`)
+  }
+
+  // Profile endpoints
+  async getProfile() {
+    return this.get("/profile")
+  }
+
+  async updateProfile(data: any) {
+    return this.put("/profile", data)
   }
 }
 
