@@ -2,7 +2,7 @@ import { type NextRequest, NextResponse } from "next/server"
 import { prisma } from "@/lib/prisma"
 import { withAuthorization, type AuthenticatedRequest } from "@/lib/middleware"
 
-// POST /api/transfers/[id]/approve
+// POST /api/transfer/[id]/approve
 export const POST = withAuthorization("transfers", "approve", async (request: AuthenticatedRequest, { params }: { params: { id: string } }) => {
   try {
     const { user } = request
@@ -33,13 +33,10 @@ export const POST = withAuthorization("transfers", "approve", async (request: Au
       }
     }
 
-    // Check if item still has sufficient quantity
-    const currentItem = await prisma.inventoryItem.findUnique({
-      where: { id: transfer.itemId },
-    })
-
-    if (!currentItem || currentItem.quantity < transfer.quantity) {
-      return NextResponse.json({ error: "Insufficient quantity available" }, { status: 400 })
+    // Re-fetch current item
+    const currentItem = await prisma.inventoryItem.findUnique({ where: { id: transfer.itemId } })
+    if (!currentItem) {
+      return NextResponse.json({ error: "Item no longer exists" }, { status: 404 })
     }
 
     // Use transaction to ensure data consistency
@@ -87,53 +84,14 @@ export const POST = withAuthorization("transfers", "approve", async (request: Au
         },
       })
 
-      // Reduce quantity in source warehouse
+      // Single-unit model: move the item to the destination warehouse
       await tx.inventoryItem.update({
         where: { id: transfer.itemId },
         data: {
-          quantity: {
-            decrement: transfer.quantity,
-          },
-        },
-      })
-
-      // Check if item exists in destination warehouse
-      const destItem = await tx.inventoryItem.findFirst({
-        where: {
-          sku: currentItem.sku,
           warehouseId: transfer.toWarehouseId,
+          status: "IN_STOCK",
         },
       })
-
-      if (destItem) {
-        // Update existing item quantity
-        await tx.inventoryItem.update({
-          where: { id: destItem.id },
-          data: {
-            quantity: {
-              increment: transfer.quantity,
-            },
-          },
-        })
-      } else {
-        // Create new item in destination warehouse
-        await tx.inventoryItem.create({
-          data: {
-            name: currentItem.name,
-            description: currentItem.description,
-            sku: `${currentItem.sku}-${transfer.toWarehouseId.slice(-4)}`, // Make SKU unique
-            barcode: currentItem.barcode,
-            quantity: transfer.quantity,
-            minStock: currentItem.minStock,
-            maxStock: currentItem.maxStock,
-            unitPrice: currentItem.unitPrice,
-            supplier: currentItem.supplier,
-            categoryId: currentItem.categoryId,
-            warehouseId: transfer.toWarehouseId,
-            status: "IN_STOCK",
-          },
-        })
-      }
 
       return updatedTransfer
     })

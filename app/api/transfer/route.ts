@@ -3,7 +3,7 @@ import { prisma } from "@/lib/prisma"
 import { withReadAccess, withAuthorization, type AuthenticatedRequest } from "@/lib/middleware"
 import { stockTransferSchema } from "@/lib/validators"
 
-// GET /api/transfers
+// GET /api/transfer
 export const GET = withReadAccess("transfers", async (request: AuthenticatedRequest) => {
   try {
     const { user } = request
@@ -72,7 +72,7 @@ export const GET = withReadAccess("transfers", async (request: AuthenticatedRequ
   }
 })
 
-// POST /api/transfers - Only managers and admins can create transfers
+// POST /api/transfer - Only managers and admins can create transfers
 export const POST = withAuthorization("transfers", "create", async (request: AuthenticatedRequest) => {
   try {
     const { user } = request
@@ -89,7 +89,7 @@ export const POST = withAuthorization("transfers", "create", async (request: Aut
       }
     }
 
-    // Check if item exists and has sufficient quantity
+  // Check if item exists
     const item = await prisma.inventoryItem.findUnique({
       where: { id: validatedData.itemId },
       include: {
@@ -101,23 +101,25 @@ export const POST = withAuthorization("transfers", "create", async (request: Aut
       return NextResponse.json({ error: "Item not found" }, { status: 404 })
     }
 
-    if (item.warehouseId !== validatedData.fromWarehouseId) {
+  if (item.warehouseId !== validatedData.fromWarehouseId) {
       return NextResponse.json({ error: "Item is not in the specified source warehouse" }, { status: 400 })
     }
 
-    if (item.quantity < validatedData.quantity) {
-      return NextResponse.json({ error: "Insufficient quantity in source warehouse" }, { status: 400 })
-    }
+  // In single-unit SKU model, each item is one unit; transfers are always of quantity 1
 
     // Prevent transfer to same warehouse
     if (validatedData.fromWarehouseId === validatedData.toWarehouseId) {
       return NextResponse.json({ error: "Cannot transfer to the same warehouse" }, { status: 400 })
     }
 
-    // Create transfer request
+  // Create transfer request (quantity is always 1 for single-unit items)
     const transfer = await prisma.stockTransfer.create({
       data: {
-        ...validatedData,
+    itemId: validatedData.itemId,
+    quantity: 1,
+    fromWarehouseId: validatedData.fromWarehouseId,
+    toWarehouseId: validatedData.toWarehouseId,
+    notes: validatedData.notes,
         requestedById: user.userId,
         status: "PENDING",
       },
