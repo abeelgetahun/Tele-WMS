@@ -27,7 +27,8 @@ export const inventoryItemSchema = z.object({
 
 export const stockTransferSchema = z.object({
   itemId: z.string().min(1, "Item is required"),
-  quantity: z.number().min(1, "Quantity must be greater than 0"),
+  // Single-unit SKU model: transfers are always one item
+  quantity: z.literal(1).default(1),
   fromWarehouseId: z.string().min(1, "Source warehouse is required"),
   toWarehouseId: z.string().min(1, "Destination warehouse is required"),
   notes: z.string().optional(),

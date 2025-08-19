@@ -3,7 +3,7 @@ import Link from "next/link"
 import { usePathname } from "next/navigation"
 import { cn } from "@/lib/utils"
 import { useAuth } from "@/context/auth-context"
-import { getAccessibleRoutes, getRoleDisplayName, canCreateTransfers, canManageUsers } from "@/lib/permissions"
+import { getAccessibleRoutes, getRoleDisplayName } from "@/lib/permissions"
 import {
   Building2,
   Package,
@@ -34,7 +34,7 @@ export function Sidebar() {
 
   if (!user) return null
 
-  const accessibleRoutes = getAccessibleRoutes(user.role, user.warehouseId)
+  const accessibleRoutes = getAccessibleRoutes(user.role)
 
   return (
     <div className="pb-12 w-64">

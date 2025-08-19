@@ -22,7 +22,7 @@ export function withAuth(handler: Function) {
       }
 
       // Handle manual tokens (for development/testing)
-      if (token.startsWith("manual-token-")) {
+  if (token.startsWith("manual-token-")) {
         // For manual tokens, we need to get user data from the client side
         // Since we can't access localStorage in middleware, we'll need a different approach
         // For now, let's create a simple user object based on the token
@@ -40,6 +40,18 @@ export function withAuth(handler: Function) {
           warehouseId: userId.includes('manager') ? "warehouse-1" :
                      userId.includes('clerk') ? "warehouse-2" : undefined,
         } as any
+
+        // Best-effort map to a real warehouse in dev so scoped queries work
+        try {
+          if (!manualUser.warehouseId && (manualUser.role === "WAREHOUSE_MANAGER" || manualUser.role === "INVENTORY_CLERK")) {
+            const firstWarehouse = await prisma.warehouse.findFirst({ select: { id: true } })
+            if (firstWarehouse) {
+              manualUser.warehouseId = firstWarehouse.id as any
+            }
+          }
+        } catch {
+          // ignore mapping errors in dev
+        }
 
         // Add user info to request
         const requestWithUser = request as AuthenticatedRequest

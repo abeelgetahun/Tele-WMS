@@ -22,6 +22,7 @@ export const ROLE_DEFINITIONS: Record<UserRole, RoleDefinition> = {
       { resource: "users", actions: ["create", "read", "update", "delete"], scope: "global" },
       { resource: "warehouses", actions: ["create", "read", "update", "delete"], scope: "global" },
       { resource: "inventory", actions: ["create", "read", "update", "delete"], scope: "global" },
+  { resource: "warehouse-images", actions: ["create", "read", "update", "delete"], scope: "global" },
       { resource: "transfers", actions: ["create", "read", "update", "delete", "approve"], scope: "global" },
       { resource: "audits", actions: ["create", "read", "update", "delete"], scope: "global" },
       { resource: "reports", actions: ["create", "read", "update", "delete"], scope: "global" },
@@ -35,7 +36,9 @@ export const ROLE_DEFINITIONS: Record<UserRole, RoleDefinition> = {
     description: "Manages warehouse operations and staff",
     warehouseScoped: true,
     permissions: [
-      { resource: "users", actions: ["read", "create"], scope: "warehouse" }, // Can create clerks/technicians for their warehouse
+  { resource: "users", actions: ["read", "create", "update"], scope: "warehouse" }, // Manage users in their warehouse
+  { resource: "user-warnings", actions: ["create", "read", "update"], scope: "warehouse" }, // Manage user warnings
+  { resource: "warehouse-images", actions: ["create", "read", "update", "delete"], scope: "warehouse" },
       { resource: "warehouses", actions: ["read", "update"], scope: "warehouse" },
       { resource: "inventory", actions: ["create", "read", "update", "delete"], scope: "warehouse" },
       { resource: "transfers", actions: ["create", "read", "update", "approve"], scope: "warehouse" },
@@ -133,7 +136,7 @@ export function canAccessWarehouse(userRole: UserRole, userWarehouseId?: string,
   return false
 }
 
-export function getAccessibleRoutes(userRole: UserRole, userWarehouseId?: string) {
+export function getAccessibleRoutes(userRole: UserRole) {
   const routes: Array<{ path: string; name: string; icon: string }> = []
   const roleDef = ROLE_DEFINITIONS[userRole]
 
