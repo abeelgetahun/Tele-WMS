@@ -143,6 +143,24 @@ class ApiClient {
     return this.delete(`/users/${id}`)
   }
 
+  // Warehouse images endpoints
+  async getWarehouseImages(params?: any) {
+    const query = params ? "?" + new URLSearchParams(params).toString() : ""
+    return this.get(`/warehouse-images${query}`)
+  }
+
+  async createWarehouseImage(data: any) {
+    return this.post(`/warehouse-images`, data)
+  }
+
+  async updateWarehouseImage(id: string, data: any) {
+    return this.put(`/warehouse-images`, { id, ...data })
+  }
+
+  async deleteWarehouseImage(id: string) {
+    return this.delete(`/warehouse-images?id=${encodeURIComponent(id)}`)
+  }
+
   // Profile endpoints
   async getProfile() {
     return this.get("/profile")
