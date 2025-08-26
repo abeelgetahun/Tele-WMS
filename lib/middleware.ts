@@ -13,7 +13,7 @@ export interface AuthenticatedRequest extends NextRequest {
 }
 
 export function withAuth(handler: Function) {
-  return async (request: NextRequest) => {
+  return async (request: NextRequest, context?: any) => {
     try {
       const token = request.headers.get("authorization")?.replace("Bearer ", "")
 
@@ -57,7 +57,7 @@ export function withAuth(handler: Function) {
         const requestWithUser = request as AuthenticatedRequest
         requestWithUser.user = manualUser
 
-        return handler(requestWithUser)
+        return handler(requestWithUser, context)
       }
 
       // Handle JWT tokens
@@ -91,7 +91,7 @@ export function withAuth(handler: Function) {
         warehouseId: user.warehouseId || undefined,
       }
 
-      return handler(requestWithUser)
+      return handler(requestWithUser, context)
     } catch (error) {
       console.error("Authentication error:", error)
       return NextResponse.json({ error: "Authentication failed" }, { status: 401 })
@@ -108,7 +108,7 @@ export function withAuthorization(
     warehouseIdExtractor?: (request: AuthenticatedRequest) => string | undefined
   }
 ) {
-  return withAuth(async (request: AuthenticatedRequest) => {
+  return withAuth(async (request: AuthenticatedRequest, context?: any) => {
     try {
       const { user } = request
 
@@ -141,7 +141,7 @@ export function withAuthorization(
         }
       }
 
-      return handler(request)
+      return handler(request, context)
     } catch (error) {
       console.error("Authorization error:", error)
       return NextResponse.json({ error: "Authorization failed" }, { status: 500 })

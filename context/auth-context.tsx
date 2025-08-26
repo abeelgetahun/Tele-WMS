@@ -6,11 +6,12 @@ import { useRouter } from "next/navigation"
 import { apiClient } from "@/lib/api-client"
 import type { UserRole } from "@/lib/permissions"
 
-interface User {
+export interface AuthUser {
   id: string
   email: string
   name: string
   role: UserRole
+  avatar?: string
   warehouseId?: string
   warehouse?: {
     id: string
@@ -18,8 +19,8 @@ interface User {
   }
 }
 
-interface AuthContextType {
-  user: User | null
+export interface AuthContextType {
+  user: AuthUser | null
   login: (email: string, password: string) => Promise<boolean>
   logout: () => void
   loading: boolean
@@ -28,7 +29,7 @@ interface AuthContextType {
 const AuthContext = createContext<AuthContextType | undefined>(undefined)
 
 // Manual fallback users
-const MANUAL_USERS = [
+const MANUAL_USERS: Array<AuthUser & { password?: string }> = [
   {
     id: "admin-1",
     email: "admin@ethiotelecom.et",
@@ -71,7 +72,7 @@ const MANUAL_USERS = [
 ]
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
-  const [user, setUser] = useState<User | null>(null)
+  const [user, setUser] = useState<AuthUser | null>(null)
   const [loading, setLoading] = useState(true)
   const router = useRouter()
 
@@ -140,7 +141,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   return <AuthContext.Provider value={{ user, login, logout, loading }}>{children}</AuthContext.Provider>
 }
 
-export function useAuth() {
+export function useAuth(): AuthContextType {
   const context = useContext(AuthContext)
   if (context === undefined) {
     throw new Error("useAuth must be used within an AuthProvider")
