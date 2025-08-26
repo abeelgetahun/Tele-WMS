@@ -672,34 +672,32 @@ export function AdminDashboard() {
               }}
               className="aspect-auto h-[280px] w-full"
             >
-              <>
-                <PieChart>
-                  <ChartTooltip content={<ChartTooltipContent />} />
-                  <Pie
-                    data={inventoryStatusData}
-                    dataKey="value"
-                    nameKey="name"
-                    innerRadius={50}
-                    outerRadius={90}
-                    paddingAngle={2}
-                    stroke="#fff"
-                    strokeWidth={2}
-                  >
-                    {inventoryStatusData.map((entry, index) => (
-                      <Cell key={`cell-${index}`} fill={entry.fill} />
-                    ))}
-                  </Pie>
-                </PieChart>
-                <div className="flex items-center justify-center gap-4 pt-3 text-xs">
-                  {inventoryStatusData.map((s, idx) => (
-                    <div key={`legend-${idx}`} className="flex items-center gap-1.5">
-                      <span className="inline-block h-2 w-2 rounded-[2px]" style={{ backgroundColor: s.fill }} />
-                      <span className="text-muted-foreground">{s.name}</span>
-                    </div>
+              <PieChart>
+                <ChartTooltip content={<ChartTooltipContent />} />
+                <Pie
+                  data={inventoryStatusData}
+                  dataKey="value"
+                  nameKey="name"
+                  innerRadius={50}
+                  outerRadius={90}
+                  paddingAngle={2}
+                  stroke="#fff"
+                  strokeWidth={2}
+                >
+                  {inventoryStatusData.map((entry, index) => (
+                    <Cell key={`cell-${index}`} fill={entry.fill} />
                   ))}
-                </div>
-              </>
+                </Pie>
+              </PieChart>
             </ChartContainer>
+            <div className="flex items-center justify-center gap-4 pt-3 text-xs">
+              {inventoryStatusData.map((s, idx) => (
+                <div key={`legend-${idx}`} className="flex items-center gap-1.5">
+                  <span className="inline-block h-2 w-2 rounded-[2px]" style={{ backgroundColor: s.fill }} />
+                  <span className="text-muted-foreground">{s.name}</span>
+                </div>
+              ))}
+            </div>
           </CardContent>
         </Card>
 
