@@ -3,13 +3,14 @@ import { prisma } from "@/lib/prisma"
 import { withAuthorization, type AuthenticatedRequest } from "@/lib/middleware"
 
 // POST /api/transfer/[id]/approve
-export const POST = withAuthorization("transfers", "approve", async (request: AuthenticatedRequest, { params }: { params: { id: string } }) => {
+export const POST = withAuthorization("transfers", "approve", async (request: AuthenticatedRequest, context: { params: Promise<{ id: string }> }) => {
   try {
     const { user } = request
+    const { id } = await context.params
 
     // Get transfer details
     const transfer = await prisma.stockTransfer.findUnique({
-      where: { id: params.id },
+      where: { id },
       include: {
         item: true,
         fromWarehouse: true,
@@ -43,7 +44,7 @@ export const POST = withAuthorization("transfers", "approve", async (request: Au
     const result = await prisma.$transaction(async (tx: any) => {
       // Update transfer status
       const updatedTransfer = await tx.stockTransfer.update({
-        where: { id: params.id },
+        where: { id },
         data: {
           status: "APPROVED",
           approvedById: user.userId,

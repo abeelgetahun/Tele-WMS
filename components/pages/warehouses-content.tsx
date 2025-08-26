@@ -197,7 +197,7 @@ export function WarehousesContent() {
           <h1 className="text-3xl font-bold tracking-tight">Warehouses</h1>
           <p className="text-muted-foreground">Manage warehouse locations and capacity</p>
         </div>
-  {hasPermission(user?.role, "warehouses", "create") && (
+  {user && hasPermission(user.role, "warehouses", "create") && (
           <Dialog open={isNewWarehouseOpen} onOpenChange={setIsNewWarehouseOpen}>
             <DialogTrigger asChild>
               <Button>
@@ -430,12 +430,12 @@ export function WarehousesContent() {
                   <TableCell>{getStatusBadge(warehouse.status)}</TableCell>
                   <TableCell>
                     <div className="flex space-x-2">
-                      {hasPermission(user?.role, "warehouses", "update") && (
+                      {user && hasPermission(user.role, "warehouses", "update") && (
                         <Button variant="ghost" size="sm" onClick={() => setEditingWarehouse(warehouse)}>
                           <Edit className="h-4 w-4" />
                         </Button>
                       )}
-                      {hasPermission(user?.role, "warehouses", "delete") && (
+                      {user && hasPermission(user.role, "warehouses", "delete") && (
                         <Button variant="ghost" size="sm" onClick={() => handleDeleteWarehouse(warehouse.id)}>
                           <Trash2 className="h-4 w-4" />
                         </Button>

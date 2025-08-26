@@ -90,6 +90,7 @@ model InventoryItem {
   status      ItemStatus  @default(IN_STOCK)
   createdAt   DateTime    @default(now())
   updatedAt   DateTime    @updatedAt
+  deletedAt   DateTime?
 
   // Relations
   category        Category        @relation(fields: [categoryId], references: [id])

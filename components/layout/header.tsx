@@ -18,6 +18,12 @@ import { useAuth } from "@/context/auth-context"
 export function Header() {
   const { user, logout } = useAuth()
 
+  const initials = ((user?.name || "")
+    .split(" ")
+    .filter(Boolean)
+    .map((n) => n[0])
+    .join("") || "U").toUpperCase()
+
   const getRoleDisplay = (role: string) => {
     const roleMap: Record<string, string> = {
       admin: "Administrator",
@@ -63,10 +69,7 @@ export function Header() {
               <Avatar className="h-8 w-8">
                 <AvatarImage src={user?.avatar || "/placeholder.svg"} />
                 <AvatarFallback>
-                  {user?.name
-                    .split(" ")
-                    .map((n) => n[0])
-                    .join("")}
+                  {initials}
                 </AvatarFallback>
               </Avatar>
               <div className="text-left">

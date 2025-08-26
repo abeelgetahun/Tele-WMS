@@ -4,10 +4,11 @@ import { withAuthorization, type AuthenticatedRequest } from "@/lib/middleware"
 import { inventoryItemSchema } from "@/lib/validators"
 
 // GET /api/inventory/[id]
-export async function GET(request: NextRequest, { params }: { params: { id: string } }) {
+export async function GET(request: NextRequest, context: { params: Promise<{ id: string }> }) {
   try {
+    const { id } = await context.params
     const inventoryItem = await prisma.inventoryItem.findUnique({
-      where: { id: params.id },
+      where: { id },
       include: {
         category: true,
         warehouse: {
@@ -46,8 +47,9 @@ export async function GET(request: NextRequest, { params }: { params: { id: stri
 }
 
 // PUT /api/inventory/[id]
-export const PUT = withAuthorization("inventory", "update", async (request: AuthenticatedRequest, { params }: { params: { id: string } }) => {
+export const PUT = withAuthorization("inventory", "update", async (request: AuthenticatedRequest, context: { params: Promise<{ id: string }> }) => {
   try {
+  const { id } = await context.params
   const body = await request.json()
 
     // Validate input
@@ -55,7 +57,7 @@ export const PUT = withAuthorization("inventory", "update", async (request: Auth
 
     // Check if item exists
     const existingItem = await prisma.inventoryItem.findUnique({
-      where: { id: params.id },
+      where: { id },
     })
 
     if (!existingItem) {
@@ -80,7 +82,7 @@ export const PUT = withAuthorization("inventory", "update", async (request: Auth
     const skuConflict = await prisma.inventoryItem.findFirst({
       where: {
         sku: validatedData.sku,
-        id: { not: params.id },
+        id: { not: id },
       },
     })
 
@@ -90,7 +92,7 @@ export const PUT = withAuthorization("inventory", "update", async (request: Auth
 
     // Update inventory item
     const inventoryItem = await prisma.inventoryItem.update({
-      where: { id: params.id },
+      where: { id },
       data: {
   // Only update editable fields (single-unit model)
   name: validatedData.name,
@@ -121,11 +123,12 @@ export const PUT = withAuthorization("inventory", "update", async (request: Auth
 })
 
 // DELETE /api/inventory/[id]
-export const DELETE = withAuthorization("inventory", "delete", async (request: AuthenticatedRequest, { params }: { params: { id: string } }) => {
+export const DELETE = withAuthorization("inventory", "delete", async (request: AuthenticatedRequest, context: { params: Promise<{ id: string }> }) => {
   try {
+    const { id } = await context.params
     // Check if item exists and has no pending transfers
     const inventoryItem = await prisma.inventoryItem.findUnique({
-      where: { id: params.id },
+      where: { id },
       include: {
         _count: {
           select: {
@@ -158,7 +161,7 @@ export const DELETE = withAuthorization("inventory", "delete", async (request: A
 
     // Delete inventory item
     await prisma.inventoryItem.delete({
-      where: { id: params.id },
+      where: { id },
     })
 
     return NextResponse.json({ message: "Inventory item deleted successfully" })

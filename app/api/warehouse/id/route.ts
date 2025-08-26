@@ -4,10 +4,11 @@ import { withAuth } from "@/lib/middleware"
 import { warehouseSchema } from "@/lib/validators"
 
 // GET /api/warehouses/[id]
-export async function GET(request: NextRequest, { params }: { params: { id: string } }) {
+export async function GET(request: NextRequest, context: { params: Promise<{ id: string }> }) {
   try {
+    const { id } = await context.params
     const warehouse = await prisma.warehouse.findUnique({
-      where: { id: params.id },
+      where: { id },
       include: {
         manager: {
           select: {
@@ -53,8 +54,9 @@ export async function GET(request: NextRequest, { params }: { params: { id: stri
 }
 
 // PUT /api/warehouses/[id]
-export const PUT = withAuth(async (request: NextRequest & { user: any }, { params }: { params: { id: string } }) => {
+export const PUT = withAuth(async (request: NextRequest & { user: any }, context: { params: Promise<{ id: string }> }) => {
   try {
+    const { id } = await context.params
     const body = await request.json()
 
     // Validate input
@@ -62,7 +64,7 @@ export const PUT = withAuth(async (request: NextRequest & { user: any }, { param
 
     // Check if warehouse exists
     const existingWarehouse = await prisma.warehouse.findUnique({
-      where: { id: params.id },
+      where: { id },
     })
 
     if (!existingWarehouse) {
@@ -73,7 +75,7 @@ export const PUT = withAuth(async (request: NextRequest & { user: any }, { param
     const nameConflict = await prisma.warehouse.findFirst({
       where: {
         name: validatedData.name,
-        id: { not: params.id },
+        id: { not: id },
       },
     })
 
@@ -83,7 +85,7 @@ export const PUT = withAuth(async (request: NextRequest & { user: any }, { param
 
     // Update warehouse
     const warehouse = await prisma.warehouse.update({
-      where: { id: params.id },
+      where: { id },
       data: validatedData,
       include: {
         manager: {
@@ -104,11 +106,12 @@ export const PUT = withAuth(async (request: NextRequest & { user: any }, { param
 })
 
 // DELETE /api/warehouses/[id]
-export const DELETE = withAuth(async (request: NextRequest & { user: any }, { params }: { params: { id: string } }) => {
+export const DELETE = withAuth(async (request: NextRequest & { user: any }, context: { params: Promise<{ id: string }> }) => {
   try {
+    const { id } = await context.params
     // Check if warehouse exists and has no inventory items
     const warehouse = await prisma.warehouse.findUnique({
-      where: { id: params.id },
+      where: { id },
       include: {
         _count: {
           select: {
@@ -133,7 +136,7 @@ export const DELETE = withAuth(async (request: NextRequest & { user: any }, { pa
 
     // Delete warehouse
     await prisma.warehouse.delete({
-      where: { id: params.id },
+      where: { id },
     })
 
     return NextResponse.json({ message: "Warehouse deleted successfully" })
