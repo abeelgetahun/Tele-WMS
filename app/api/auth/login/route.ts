@@ -19,7 +19,13 @@ export async function POST(request: NextRequest) {
       include: { warehouse: true },
     })
 
-    if (!user || !user.isActive) {
+    if (!user) {
+      console.debug("LOGIN_DEBUG: user not found for email", normalizedEmail)
+      return NextResponse.json({ error: "Invalid credentials" }, { status: 401 })
+    }
+
+    if (!user.isActive) {
+      console.debug("LOGIN_DEBUG: user inactive", { id: user.id, email: user.email })
       return NextResponse.json({ error: "Invalid credentials" }, { status: 401 })
     }
 
@@ -27,7 +33,8 @@ export async function POST(request: NextRequest) {
     let isValidPassword = false
     try {
       isValidPassword = await comparePassword(validatedData.password, user.password)
-    } catch (_) {
+    } catch (e) {
+      console.debug("LOGIN_DEBUG: bcrypt compare threw", e)
       // fall through to legacy check below
     }
 
@@ -44,10 +51,13 @@ export async function POST(request: NextRequest) {
           // Non-fatal: login can proceed even if rehash fails
           console.warn("Password rehash failed during login migration:", e)
         }
+      } else {
+        console.debug("LOGIN_DEBUG: bcrypt mismatch and stored password is hashed")
       }
     }
 
     if (!isValidPassword) {
+      console.debug("LOGIN_DEBUG: password invalid for user", { id: user.id, email: user.email })
       return NextResponse.json({ error: "Invalid credentials" }, { status: 401 })
     }
 
