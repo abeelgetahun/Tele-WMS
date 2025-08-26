@@ -1,0 +1,3 @@
+# Temporarily disallow indexing while resolving warnings
+User-agent: *
+Disallow: /
