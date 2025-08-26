@@ -13,7 +13,8 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Alert, AlertDescription } from "@/components/ui/alert"
-import { Building2, Loader2 } from "lucide-react"
+import { Building2, Info, Loader2 } from "lucide-react"
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
 
 export default function LoginPage() {
   const [email, setEmail] = useState("")
@@ -56,7 +57,30 @@ export default function LoginPage() {
             priority
           /> 
           <h2 className="mt-6 text-3xl font-extrabold text-gray-900">Tele Warehouse Management System</h2>
-          <p className="mt-2 text-sm text-gray-600">Sign in to your account</p>
+          <p className="mt-2 text-sm text-gray-600 flex items-center gap-2">
+            Sign in to your account
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <button
+                    type="button"
+                    aria-label="Show demo credentials"
+                    className="inline-flex items-center justify-center rounded-full p-1 text-gray-500 hover:text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  >
+                    <Info className="h-4 w-4" />
+                  </button>
+                </TooltipTrigger>
+                <TooltipContent side="right" className="max-w-xs text-left">
+                  <div className="space-y-1">
+                    <p className="font-medium">Demo credentials</p>
+                    <p>Admin: admin@ethiotelecom.et / admin123</p>
+                    <p>Manager: manager@ethiotelecom.et / manager123</p>
+                    <p>Clerk: clerk@ethiotelecom.et / clerk123</p>
+                  </div>
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+          </p>
         </div>
 
         <Card>

@@ -48,6 +48,12 @@ export default function AddInventoryPage() {
 
   useEffect(() => {
     ;(async () => {
+      const token = typeof window !== "undefined" ? localStorage.getItem("token") : null
+      // Only fetch when authenticated; otherwise skip to let ProtectedRoute handle redirect
+      if (!user || !token) {
+        setLoading(false)
+        return
+      }
       try {
         setLoading(true)
         const [categoriesData, warehousesData] = await Promise.all([
@@ -58,13 +64,17 @@ export default function AddInventoryPage() {
         setWarehouses(warehousesData)
         // Default to user's warehouse if available
         if (user?.warehouseId) setForm((f) => ({ ...f, warehouseId: user.warehouseId! }))
-      } catch (e) {
-        console.error(e)
+      } catch (e: any) {
+        // Silently ignore auth errors; ProtectedRoute will route to /login
+        const msg = typeof e?.message === "string" ? e.message.toLowerCase() : ""
+        if (!msg.includes("authentication required") && !msg.includes("401")) {
+          console.error(e)
+        }
       } finally {
         setLoading(false)
       }
     })()
-  }, [user?.warehouseId])
+  }, [user?.warehouseId, user])
 
   const onSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
