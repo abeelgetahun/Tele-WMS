@@ -160,7 +160,7 @@ export default function UsersPage() {
             <h1 className="text-3xl font-bold tracking-tight">User Management</h1>
             <p className="text-muted-foreground">Manage system users and their access permissions</p>
           </div>
-          {hasPermission(user?.role, "users", "create") && (
+          {user && hasPermission(user.role, "users", "create") && (
             <Dialog open={isNewUserOpen} onOpenChange={setIsNewUserOpen}>
               <DialogTrigger asChild>
                 <Button>

@@ -150,7 +150,7 @@ export default function TransfersPage() {
             <h1 className="text-3xl font-bold tracking-tight">Stock Transfers</h1>
             <p className="text-muted-foreground">Manage stock movements between warehouses</p>
           </div>
-          {hasPermission(user?.role, "transfers", "create") && (
+          {user && hasPermission(user.role, "transfers", "create") && (
             <Dialog open={isNewTransferOpen} onOpenChange={setIsNewTransferOpen}>
               <DialogTrigger asChild>
                 <Button>
@@ -389,7 +389,7 @@ export default function TransfersPage() {
                         <Button variant="ghost" size="sm">
                           <Eye className="h-4 w-4" />
                         </Button>
-                        {hasPermission(user?.role, "transfers", "approve") && transfer.status === "PENDING" && (
+                        {user && hasPermission(user.role, "transfers", "approve") && transfer.status === "PENDING" && (
                           <Button variant="ghost" size="sm" onClick={() => handleApprove(transfer.id)}>
                             Approve
                           </Button>

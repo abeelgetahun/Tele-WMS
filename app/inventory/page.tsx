@@ -258,7 +258,7 @@ export default function InventoryPage() {
                   <TabsTrigger value="category">Category</TabsTrigger>
                 </TabsList>
               </Tabs>
-              {hasPermission(user?.role!, "inventory", "create") && (
+              {user && hasPermission(user.role, "inventory", "create") && (
                 <Link href="/inventory/add">
                   <Button>
                     <Plus className="mr-2 h-4 w-4" />
@@ -483,12 +483,12 @@ export default function InventoryPage() {
                           <TableCell>{new Date(item.createdAt).toLocaleDateString()}</TableCell>
                           <TableCell>
                             <div className="flex space-x-2">
-                              {hasPermission(user?.role!, "inventory", "update") && (
+                              {user && hasPermission(user.role, "inventory", "update") && (
                                 <Button variant="ghost" size="sm" onClick={() => openEdit(item)}>
                                   <Edit className="h-4 w-4" />
                                 </Button>
                               )}
-                              {hasPermission(user?.role!, "inventory", "delete") && (
+                              {user && hasPermission(user.role, "inventory", "delete") && (
                                 <Button variant="ghost" size="sm" onClick={() => handleDeleteItem(item.id)}>
                                   <Trash2 className="h-4 w-4" />
                                 </Button>
@@ -561,7 +561,7 @@ export default function InventoryPage() {
                           <div className="flex items-center gap-3">
                             <Badge variant="outline">{item.warehouse.name}</Badge>
                             <Badge variant="outline">ETB {item.unitPrice}</Badge>
-                            {hasPermission(user?.role!, "inventory", "update") && (
+                            {user && hasPermission(user.role, "inventory", "update") && (
                               <Button variant="outline" size="sm" onClick={() => openEdit(item)}>
                                 <Edit className="h-4 w-4 mr-1" /> Edit
                               </Button>
