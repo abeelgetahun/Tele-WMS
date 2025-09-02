@@ -1,5 +1,7 @@
 import type { NextConfig } from "next";
 
+const isProd = process.env.NODE_ENV === "production";
+
 const securityHeaders = [
   // Enforce HTTPS
   { key: "Strict-Transport-Security", value: "max-age=31536000; includeSubDomains; preload" },
@@ -33,12 +35,14 @@ const securityHeaders = [
       "img-src 'self' https: data: blob:",
       // Inline styles are needed for some component libs; restrict to self + inline
       "style-src 'self' 'unsafe-inline'",
-      // Next.js runtime may use eval in dev; keep self only in prod
-      "script-src 'self' 'unsafe-inline'",
+      // Next.js runtime uses eval in dev for Fast Refresh; allow it only in dev
+      isProd
+        ? "script-src 'self' 'unsafe-inline'"
+        : "script-src 'self' 'unsafe-inline' 'unsafe-eval'",
       // Fonts
       "font-src 'self' data:",
-      // API calls to same origin and HTTPS endpoints
-      "connect-src 'self' https:",
+      // API calls to same origin and HTTPS endpoints; allow ws: in dev for HMR
+      isProd ? "connect-src 'self' https:" : "connect-src 'self' https: ws:",
       // Upgrade any mixed content
       "upgrade-insecure-requests",
     ].join("; "),
