@@ -59,9 +59,9 @@ export default function DashboardPage() {
 
   return (
     <MainLayout>
-      <div className="mb-6">
-        <h1 className="text-3xl font-bold">Welcome, {user.name}</h1>
-        <p className="text-muted-foreground">
+      <div className="mb-4 sm:mb-6">
+        <h1 className="text-2xl sm:text-3xl font-bold">Welcome, {user.name}</h1>
+        <p className="text-sm sm:text-base text-muted-foreground">
           {getRoleDisplayName(user.role)} Dashboard
           {user.warehouse && ` - ${user.warehouse.name}`}
         </p>
