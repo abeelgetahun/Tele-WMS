@@ -1,6 +1,6 @@
 "use client"
 
-import { Bell, Search, User } from "lucide-react"
+import { Bell, Search, User, Menu, X } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import {
@@ -14,9 +14,15 @@ import {
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Badge } from "@/components/ui/badge"
 import { useAuth } from "@/context/auth-context"
+import { useState } from "react"
 
-export function Header() {
+interface HeaderProps {
+  onMenuClick: () => void
+}
+
+export function Header({ onMenuClick }: HeaderProps) {
   const { user, logout } = useAuth()
+  const [searchOpen, setSearchOpen] = useState(false)
 
   const initials = ((user?.name || "")
     .split(" ")
@@ -26,54 +32,99 @@ export function Header() {
 
   const getRoleDisplay = (role: string) => {
     const roleMap: Record<string, string> = {
-      admin: "Administrator",
-      warehouse_manager: "Warehouse Manager",
-      inventory_clerk: "Inventory Clerk",
-      technician: "Technician",
-      auditor: "Auditor",
+      ADMIN: "Administrator",
+      WAREHOUSE_MANAGER: "Warehouse Manager",
+      INVENTORY_CLERK: "Inventory Clerk",
+      TECHNICIAN: "Technician",
+      AUDITOR: "Auditor",
     }
     return roleMap[role] || role
   }
 
   const getRoleBadgeVariant = (role: string) => {
     const variantMap: Record<string, "default" | "secondary" | "destructive" | "outline"> = {
-      admin: "destructive",
-      warehouse_manager: "default",
-      inventory_clerk: "secondary",
-      technician: "outline",
-      auditor: "secondary",
+      ADMIN: "destructive",
+      WAREHOUSE_MANAGER: "default",
+      INVENTORY_CLERK: "secondary",
+      TECHNICIAN: "outline",
+      AUDITOR: "secondary",
     }
     return variantMap[role] || "default"
   }
 
   return (
-    <header className="flex items-center justify-between px-6 py-4 bg-background border-b">
-      <div className="flex items-center space-x-4 flex-1">
-        <div className="relative max-w-md">
+    <header className="flex items-center justify-between px-3 sm:px-4 lg:px-6 py-3 sm:py-4 bg-background border-b">
+      {/* Mobile menu button */}
+      <Button
+        variant="ghost"
+        size="icon"
+        className="lg:hidden"
+        onClick={onMenuClick}
+      >
+        <Menu className="h-5 w-5" />
+      </Button>
+
+      {/* Search - Desktop */}
+      <div className="hidden sm:flex items-center space-x-4 flex-1 lg:ml-0">
+        <div className="relative max-w-md w-full">
           <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
-          <Input placeholder="Search inventory, warehouses..." className="pl-10 w-80" />
+          <Input 
+            placeholder="Search inventory, warehouses..." 
+            className="pl-10 w-full sm:w-80" 
+          />
         </div>
       </div>
 
-      <div className="flex items-center space-x-4">
+      {/* Mobile search toggle */}
+      <div className="flex-1 flex justify-center sm:hidden">
+        {searchOpen ? (
+          <div className="flex items-center space-x-2 w-full max-w-sm">
+            <div className="relative flex-1">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
+              <Input 
+                placeholder="Search..." 
+                className="pl-10 w-full" 
+                autoFocus
+              />
+            </div>
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => setSearchOpen(false)}
+            >
+              <X className="h-4 w-4" />
+            </Button>
+          </div>
+        ) : (
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={() => setSearchOpen(true)}
+          >
+            <Search className="h-5 w-5" />
+          </Button>
+        )}
+      </div>
+
+      <div className="flex items-center space-x-2 sm:space-x-4">
         {/* Notifications */}
         <Button variant="ghost" size="icon" className="relative">
-          <Bell className="h-5 w-5" />
-          <Badge className="absolute -top-1 -right-1 h-5 w-5 flex items-center justify-center p-0 text-xs">3</Badge>
+          <Bell className="h-4 w-4 sm:h-5 sm:w-5" />
+          <Badge className="absolute -top-1 -right-1 h-4 w-4 sm:h-5 sm:w-5 flex items-center justify-center p-0 text-xs">3</Badge>
         </Button>
 
         {/* User Menu */}
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <Button variant="ghost" className="flex items-center space-x-2 px-2">
-              <Avatar className="h-8 w-8">
+            <Button variant="ghost" className="flex items-center space-x-2 px-1 sm:px-2">
+              <Avatar className="h-7 w-7 sm:h-8 sm:w-8">
                 <AvatarImage src={user?.avatar || "/placeholder.svg"} />
-                <AvatarFallback>
+                <AvatarFallback className="text-xs sm:text-sm">
                   {initials}
                 </AvatarFallback>
               </Avatar>
-              <div className="text-left">
-                <p className="text-sm font-medium">{user?.name}</p>
+              <div className="text-left hidden sm:block">
+                <p className="text-sm font-medium truncate max-w-24 lg:max-w-none">{user?.name}</p>
                 <Badge variant={getRoleBadgeVariant(user?.role || "")} className="text-xs">
                   {getRoleDisplay(user?.role || "")}
                 </Badge>
@@ -81,7 +132,15 @@ export function Header() {
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end" className="w-56">
-            <DropdownMenuLabel>My Account</DropdownMenuLabel>
+            <DropdownMenuLabel>
+              <div>
+                <p className="font-medium">{user?.name}</p>
+                <p className="text-xs text-muted-foreground">{getRoleDisplay(user?.role || "")}</p>
+                {user?.warehouse && (
+                  <p className="text-xs text-muted-foreground">{user.warehouse.name}</p>
+                )}
+              </div>
+            </DropdownMenuLabel>
             <DropdownMenuSeparator />
             <DropdownMenuItem>
               <User className="mr-2 h-4 w-4" />
