@@ -421,36 +421,36 @@ export function AdminDashboard() {
   }
 
   return (
-    <div className="space-y-8 p-6 bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50 min-h-screen">
+    <div className="space-y-4 sm:space-y-6 lg:space-y-8 p-3 sm:p-4 lg:p-6 bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50 min-h-screen">
       {/* Enhanced Header */}
       <div className="relative">
-        <div className="absolute inset-0 bg-gradient-to-r from-blue-600/10 to-purple-600/10 rounded-3xl blur-3xl"></div>
-        <div className="relative bg-white/80 backdrop-blur-sm rounded-2xl p-8 border border-white/20 shadow-xl">
-          <div className="flex items-center justify-between flex-wrap gap-4">
+        <div className="absolute inset-0 bg-gradient-to-r from-blue-600/10 to-purple-600/10 rounded-2xl sm:rounded-3xl blur-3xl"></div>
+        <div className="relative bg-white/80 backdrop-blur-sm rounded-xl sm:rounded-2xl p-4 sm:p-6 lg:p-8 border border-white/20 shadow-xl">
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
             <div className="space-y-2">
-              <div className="flex items-center gap-3">
-                <div className="p-2 bg-gradient-to-br from-blue-500 to-purple-600 rounded-xl">
-                  <Shield className="h-6 w-6 text-white" />
+              <div className="flex items-center gap-2 sm:gap-3">
+                <div className="p-1.5 sm:p-2 bg-gradient-to-br from-blue-500 to-purple-600 rounded-lg sm:rounded-xl">
+                  <Shield className="h-4 w-4 sm:h-5 sm:w-5 lg:h-6 lg:w-6 text-white" />
                 </div>
-                <h1 className="text-4xl font-bold bg-gradient-to-r from-gray-900 to-gray-600 bg-clip-text text-transparent">
+                <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold bg-gradient-to-r from-gray-900 to-gray-600 bg-clip-text text-transparent">
                   Admin Dashboard
                 </h1>
-                <Sparkles className="h-6 w-6 text-yellow-500 animate-pulse" />
+                <Sparkles className="h-4 w-4 sm:h-5 sm:w-5 lg:h-6 lg:w-6 text-yellow-500 animate-pulse" />
               </div>
-              <p className="text-gray-600 text-lg">Complete system overview and intelligent management</p>
+              <p className="text-gray-600 text-sm sm:text-base lg:text-lg">Complete system overview and intelligent management</p>
             </div>
-            <div className="flex items-center gap-3">
-              <Badge variant="secondary" className="gap-2 px-4 py-2 bg-green-100 text-green-800 border-green-200">
-                <CheckCircle className="h-4 w-4" />
-                System Online
+            <div className="flex flex-wrap items-center gap-2 sm:gap-3">
+              <Badge variant="secondary" className="gap-1 sm:gap-2 px-2 sm:px-3 lg:px-4 py-1 sm:py-2 bg-green-100 text-green-800 border-green-200 text-xs sm:text-sm">
+                <CheckCircle className="h-3 w-3 sm:h-4 sm:w-4" />
+                <span className="hidden sm:inline">System</span> Online
               </Badge>
-              <Badge variant="outline" className="gap-2 px-4 py-2 bg-blue-50 text-blue-700 border-blue-200">
-                <Building2 className="h-4 w-4" />
-                {stats?.totalWarehouses || 0} Facilities
+              <Badge variant="outline" className="gap-1 sm:gap-2 px-2 sm:px-3 lg:px-4 py-1 sm:py-2 bg-blue-50 text-blue-700 border-blue-200 text-xs sm:text-sm">
+                <Building2 className="h-3 w-3 sm:h-4 sm:w-4" />
+                {stats?.totalWarehouses || 0} <span className="hidden sm:inline">Facilities</span>
               </Badge>
-              <Badge variant="outline" className="gap-2 px-4 py-2 bg-purple-50 text-purple-700 border-purple-200">
-                <Clock className="h-4 w-4" />
-                Live Data
+              <Badge variant="outline" className="gap-1 sm:gap-2 px-2 sm:px-3 lg:px-4 py-1 sm:py-2 bg-purple-50 text-purple-700 border-purple-200 text-xs sm:text-sm">
+                <Clock className="h-3 w-3 sm:h-4 sm:w-4" />
+                <span className="hidden sm:inline">Live</span> Data
               </Badge>
             </div>
           </div>
@@ -458,7 +458,7 @@ export function AdminDashboard() {
       </div>
 
       {/* Enhanced Stats Cards */}
-      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
+      <div className="grid gap-3 sm:gap-4 lg:gap-6 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4">
         <Card className="border-0 shadow-xl bg-gradient-to-br from-blue-500 to-blue-600 text-white overflow-hidden relative">
           <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full -translate-y-16 translate-x-16"></div>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 relative z-10">
@@ -549,19 +549,19 @@ export function AdminDashboard() {
       </div>
 
       {/* Enhanced Charts Section */}
-      <div className="grid gap-6 xl:grid-cols-3">
+      <div className="grid gap-3 sm:gap-4 lg:gap-6 grid-cols-1 xl:grid-cols-3">
         {/* Items by Warehouse - Enhanced */}
-  <Card className="xl:col-span-2 border-0 shadow-xl bg-white/80 backdrop-blur-sm overflow-hidden">
+        <Card className="xl:col-span-2 border-0 shadow-xl bg-white/80 backdrop-blur-sm overflow-hidden">
           <CardHeader className="pb-4">
-            <div className="flex items-center justify-between">
+            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 sm:gap-4">
               <div>
-                <CardTitle className="flex items-center gap-2 text-xl">
-                  <BarChart3 className="h-5 w-5 text-blue-600" />
+                <CardTitle className="flex items-center gap-2 text-lg sm:text-xl">
+                  <BarChart3 className="h-4 w-4 sm:h-5 sm:w-5 text-blue-600" />
                   Warehouse Distribution
                 </CardTitle>
-                <CardDescription className="text-gray-600">Inventory allocation across all facilities</CardDescription>
+                <CardDescription className="text-gray-600 text-sm">Inventory allocation across all facilities</CardDescription>
               </div>
-              <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200">
+              <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200 text-xs">
                 Live Data
               </Badge>
             </div>
@@ -572,9 +572,9 @@ export function AdminDashboard() {
                 items: { label: "Items", color: "hsl(217, 91%, 60%)" },
                 capacity: { label: "Capacity", color: "hsl(217, 91%, 80%)" },
               }}
-              className="aspect-auto h-[350px] w-full"
+              className="aspect-auto h-[250px] sm:h-[300px] lg:h-[350px] w-full"
             >
-              <BarChart data={itemsByWarehouse} margin={{ top: 20, right: 30, left: 20, bottom: 60 }}>
+              <BarChart data={itemsByWarehouse} margin={{ top: 20, right: 15, left: 10, bottom: 60 }}>
                 <defs>
                   <linearGradient id="barGradient" x1="0" y1="0" x2="0" y2="1">
                     <stop offset="0%" stopColor="hsl(217, 91%, 60%)" />
@@ -590,19 +590,19 @@ export function AdminDashboard() {
                   textAnchor="end"
                   height={60}
                   interval={0}
-                  tick={{ fontSize: 12, fill: "#64748b" }}
+                  tick={{ fontSize: 10, fill: "#64748b" }}
                 />
                 <YAxis
                   allowDecimals={false}
                   tickLine={false}
                   axisLine={false}
-                  tick={{ fontSize: 12, fill: "#64748b" }}
+                  tick={{ fontSize: 10, fill: "#64748b" }}
                 />
                 <ChartTooltip cursor={{ fill: "rgba(59, 130, 246, 0.1)" }} content={<ChartTooltipContent />} />
                 <Bar
                   dataKey="items"
                   fill="url(#barGradient)"
-                  radius={[8, 8, 0, 0]}
+                  radius={[4, 4, 0, 0]}
                   stroke="hsl(217, 91%, 60%)"
                   strokeWidth={1}
                 />
@@ -614,8 +614,8 @@ export function AdminDashboard() {
         {/* Transfer Activity - Enhanced */}
         <Card className="border-0 shadow-xl bg-white/80 backdrop-blur-sm overflow-hidden">
           <CardHeader className="pb-4">
-            <CardTitle className="text-xl">Transfer Trends</CardTitle>
-            <CardDescription>14-day activity overview</CardDescription>
+            <CardTitle className="text-lg sm:text-xl">Transfer Trends</CardTitle>
+            <CardDescription className="text-sm">14-day activity overview</CardDescription>
           </CardHeader>
           <CardContent>
             <ChartContainer
@@ -624,9 +624,9 @@ export function AdminDashboard() {
                 completed: { label: "Completed", color: "hsl(217, 91%, 60%)" },
                 pending: { label: "Pending", color: "hsl(25, 95%, 53%)" },
               }}
-              className="aspect-auto h-[350px] w-full"
+              className="aspect-auto h-[250px] sm:h-[300px] lg:h-[350px] w-full"
             >
-              <AreaChart data={transferActivityData} margin={{ top: 20, right: 30, left: 20, bottom: 20 }}>
+              <AreaChart data={transferActivityData} margin={{ top: 20, right: 15, left: 10, bottom: 20 }}>
                 <defs>
                   <linearGradient id="transferGradient" x1="0" y1="0" x2="0" y2="1">
                     <stop offset="0%" stopColor="hsl(142, 71%, 45%)" stopOpacity={0.8} />
@@ -634,12 +634,12 @@ export function AdminDashboard() {
                   </linearGradient>
                 </defs>
                 <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
-                <XAxis dataKey="day" tickLine={false} axisLine={false} tick={{ fontSize: 11, fill: "#64748b" }} />
+                <XAxis dataKey="day" tickLine={false} axisLine={false} tick={{ fontSize: 9, fill: "#64748b" }} />
                 <YAxis
                   allowDecimals={false}
                   tickLine={false}
                   axisLine={false}
-                  tick={{ fontSize: 11, fill: "#64748b" }}
+                  tick={{ fontSize: 9, fill: "#64748b" }}
                 />
                 <ChartTooltip content={<ChartTooltipContent />} />
                 <Area
@@ -647,7 +647,7 @@ export function AdminDashboard() {
                   dataKey="transfers"
                   stroke="hsl(142, 71%, 45%)"
                   fill="url(#transferGradient)"
-                  strokeWidth={3}
+                  strokeWidth={2}
                 />
               </AreaChart>
             </ChartContainer>
@@ -656,7 +656,7 @@ export function AdminDashboard() {
       </div>
 
       {/* Advanced Analytics Grid */}
-      <div className="grid gap-6 lg:grid-cols-2 xl:grid-cols-4">
+      <div className="grid gap-3 sm:gap-4 lg:gap-6 grid-cols-1 sm:grid-cols-2 xl:grid-cols-4">
         {/* Inventory Status Pie */}
         <Card className="border-0 shadow-xl bg-white/80 backdrop-blur-sm overflow-hidden">
           <CardHeader className="pb-4">
