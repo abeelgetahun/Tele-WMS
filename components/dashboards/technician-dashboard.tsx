@@ -43,9 +43,11 @@ export function TechnicianDashboard() {
   if (loading) {
     return (
       <div className="space-y-6">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight">Technician Dashboard</h1>
-          <p className="text-muted-foreground">Loading...</p>
+        <div className="flex items-center justify-center py-12">
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
+            <p className="text-muted-foreground">Loading dashboard data...</p>
+          </div>
         </div>
       </div>
     )
@@ -53,11 +55,6 @@ export function TechnicianDashboard() {
 
   return (
     <div className="space-y-6">
-      {/* Header */}
-      <div>
-        <h1 className="text-3xl font-bold tracking-tight">Technician Dashboard</h1>
-        <p className="text-muted-foreground">Equipment maintenance and technical operations</p>
-      </div>
 
       {/* Stats Cards */}
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
