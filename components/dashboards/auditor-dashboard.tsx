@@ -44,9 +44,11 @@ export function AuditorDashboard() {
   if (loading) {
     return (
       <div className="space-y-6">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight">Auditor Dashboard</h1>
-          <p className="text-muted-foreground">Loading...</p>
+        <div className="flex items-center justify-center py-12">
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
+            <p className="text-muted-foreground">Loading dashboard data...</p>
+          </div>
         </div>
       </div>
     )
@@ -54,12 +56,8 @@ export function AuditorDashboard() {
 
   return (
     <div className="space-y-6">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight">Auditor Dashboard</h1>
-          <p className="text-muted-foreground">Audit management and compliance monitoring</p>
-        </div>
+      {/* Quick Actions Header */}
+      <div className="flex items-center justify-end">
         <Button>
           <Calendar className="h-4 w-4 mr-2" />
           Schedule Audit
