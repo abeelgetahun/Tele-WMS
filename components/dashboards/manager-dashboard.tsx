@@ -208,54 +208,20 @@ export function ManagerDashboard() {
 
   return (
     <div className="space-y-8">
-      {/* Enhanced Header */}
-      <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-blue-600 via-blue-700 to-indigo-800 p-8 text-white">
-        <div className="absolute inset-0 bg-black/10"></div>
-        <div className="relative z-10">
-          <div className="flex items-center justify-between flex-wrap gap-4">
-            <div className="space-y-2">
-              <div className="flex items-center gap-3">
-                <div className="p-3 bg-white/20 rounded-xl backdrop-blur-sm">
-                  <Building2 className="h-8 w-8" />
-                </div>
-                <div>
-                  <h1 className="text-3xl font-bold">Warehouse Management</h1>
-                  <p className="text-blue-100 text-lg">{user?.warehouse?.name || "Your Warehouse"}</p>
-                </div>
-              </div>
-              <div className="flex items-center gap-4 text-sm">
-                <Badge variant="secondary" className="bg-white/20 text-white border-white/30">
-                  <MapPin className="h-3 w-3 mr-1" />
-                  Active Facility
-                </Badge>
-                <Badge variant="secondary" className="bg-white/20 text-white border-white/30">
-                  <Users className="h-3 w-3 mr-1" />
-                  {stats.totalUsers} Team Members
-                </Badge>
-                <Badge variant="secondary" className="bg-white/20 text-white border-white/30">
-                  <Target className="h-3 w-3 mr-1" />
-                  {stats.efficiency.toFixed(1)}% Efficiency
-                </Badge>
-              </div>
-            </div>
-            <div className="flex gap-3">
-              <Link href="/inventory">
-                <Button variant="secondary" className="bg-white/20 hover:bg-white/30 text-white border-white/30">
-                  <Package className="h-4 w-4 mr-2" />
-                  Manage Inventory
-                </Button>
-              </Link>
-              <Link href="/users">
-                <Button variant="secondary" className="bg-white/20 hover:bg-white/30 text-white border-white/30">
-                  <Users className="h-4 w-4 mr-2" />
-                  Manage Team
-                </Button>
-              </Link>
-            </div>
-          </div>
-        </div>
-        <div className="absolute -right-20 -top-20 w-40 h-40 bg-white/10 rounded-full blur-3xl"></div>
-        <div className="absolute -left-20 -bottom-20 w-60 h-60 bg-white/5 rounded-full blur-3xl"></div>
+      {/* Quick Actions Header */}
+      <div className="flex items-center justify-end gap-3">
+        <Link href="/inventory">
+          <Button>
+            <Package className="h-4 w-4 mr-2" />
+            Manage Inventory
+          </Button>
+        </Link>
+        <Link href="/users">
+          <Button variant="outline">
+            <Users className="h-4 w-4 mr-2" />
+            Manage Team
+          </Button>
+        </Link>
       </div>
 
       {/* Enhanced Stats Cards */}
