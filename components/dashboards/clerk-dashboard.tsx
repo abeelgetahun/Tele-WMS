@@ -67,9 +67,11 @@ export function ClerkDashboard() {
   if (loading) {
     return (
       <div className="space-y-6">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight">Clerk Dashboard</h1>
-          <p className="text-muted-foreground">Loading...</p>
+        <div className="flex items-center justify-center py-12">
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
+            <p className="text-muted-foreground">Loading dashboard data...</p>
+          </div>
         </div>
       </div>
     )
@@ -77,12 +79,8 @@ export function ClerkDashboard() {
 
   return (
     <div className="space-y-6">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight">Inventory Dashboard</h1>
-          <p className="text-muted-foreground">{user?.warehouse?.name || "Your Warehouse"} - Daily Operations</p>
-        </div>
+      {/* Quick Actions Header */}
+      <div className="flex items-center justify-end">
         <div className="flex space-x-2">
           <Link href="/inventory/add">
             <Button>
