@@ -6,6 +6,7 @@ import { useAuth } from "@/context/auth-context"
 import { getAccessibleRoutes, getRoleDisplayName } from "@/lib/permissions"
 import { Badge } from "@/components/ui/badge"
 import { Separator } from "@/components/ui/separator"
+import { Button } from "@/components/ui/button"
 import {
   Building2,
   Package,
@@ -29,6 +30,7 @@ import {
   Activity,
   Calendar,
   Download,
+  X,
 } from "lucide-react"
 import { useState, useEffect } from "react"
 import { apiClient } from "@/lib/api-client"
@@ -45,7 +47,11 @@ const iconMap = {
   User: UserIcon,
 }
 
-export function Sidebar() {
+interface SidebarProps {
+  onClose?: () => void
+}
+
+export function Sidebar({ onClose }: SidebarProps) {
   const pathname = usePathname()
   const { user } = useAuth()
   const [pendingCount, setPendingCount] = useState(0)
@@ -82,8 +88,20 @@ export function Sidebar() {
   const accessibleRoutes = getAccessibleRoutes(user.role)
 
   return (
-    <div className="pb-12 w-64 bg-gradient-to-b from-slate-50 to-white border-r border-slate-200">
+    <div className="pb-12 w-64 bg-gradient-to-b from-slate-50 to-white border-r border-slate-200 h-full overflow-y-auto">
       <div className="space-y-4 py-4">
+        {/* Mobile close button */}
+        <div className="flex justify-end px-3 lg:hidden">
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={onClose}
+            className="h-8 w-8"
+          >
+            <X className="h-4 w-4" />
+          </Button>
+        </div>
+
         {/* Header Section */}
         <div className="px-3 py-2">
           <div className="mb-4 p-4 bg-gradient-to-r from-blue-600 to-blue-700 rounded-lg text-white">
@@ -91,7 +109,7 @@ export function Sidebar() {
               <div className="p-2 bg-white/20 rounded-lg">
                 <Building2 className="h-5 w-5" />
               </div>
-              <div>
+              <div className="flex-1">
                 <h2 className="text-lg font-bold">TWMS</h2>
                 <p className="text-xs opacity-90">Warehouse Management</p>
               </div>
@@ -117,6 +135,7 @@ export function Sidebar() {
                 <Link
                   key={route.path}
                   href={route.path}
+                  onClick={() => onClose?.()}
                   className={cn(
                     "flex items-center rounded-lg px-3 py-2.5 text-sm font-medium transition-all duration-200",
                     "hover:bg-blue-50 hover:text-blue-700 hover:shadow-sm",
