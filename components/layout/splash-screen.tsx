@@ -15,11 +15,14 @@ export default function SplashScreen() {
   // Respect reduced motion
   const prefersReducedMotion = useMemo(() => {
     if (typeof window === "undefined") return false
-    return window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches
+    return (
+      window.matchMedia &&
+      window.matchMedia("(prefers-reduced-motion: reduce)").matches
+    )
   }, [])
 
   const enterMs = prefersReducedMotion ? 0 : 350
-  const holdMs = prefersReducedMotion ? 200 : 700
+  const holdMs = prefersReducedMotion ? 200 : 900
   const exitMs = prefersReducedMotion ? 100 : 450
 
   const totalMs = enterMs + holdMs + exitMs
@@ -32,28 +35,31 @@ export default function SplashScreen() {
   useEffect(() => {
     if (!mounted) return
     try {
-      const alreadyShown = typeof window !== "undefined" && sessionStorage.getItem(hasShownKey)
+      const alreadyShown =
+        typeof window !== "undefined" && sessionStorage.getItem(hasShownKey)
       if (alreadyShown) return
 
       setVisible(true)
 
       // simple timeline: enter -> hold -> exit
-      timeouts.current.push(window.setTimeout(() => {
-        // start exit
-        setLeaving(true)
-      }, enterMs + holdMs))
+      timeouts.current.push(
+        window.setTimeout(() => {
+          setLeaving(true)
+        }, enterMs + holdMs)
+      )
 
-      timeouts.current.push(window.setTimeout(() => {
-        // hide and mark as shown
-        setVisible(false)
-        sessionStorage.setItem(hasShownKey, "1")
-      }, totalMs))
+      timeouts.current.push(
+        window.setTimeout(() => {
+          setVisible(false)
+          sessionStorage.setItem(hasShownKey, "1")
+        }, totalMs)
+      )
     } catch {
       // fail open: do nothing special
     }
 
     return () => {
-      timeouts.current.forEach(id => clearTimeout(id))
+      timeouts.current.forEach((id) => clearTimeout(id))
       timeouts.current = []
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -72,23 +78,54 @@ export default function SplashScreen() {
     >
       <div
         className={[
-          "flex flex-col items-center gap-4 select-none",
-          "transition-transform",
-          prefersReducedMotion ? "duration-0" : "duration-700 ease-out",
-          leaving ? "scale-95" : "scale-100",
+          "flex flex-col items-center gap-5 select-none",
+          "[perspective:1000px]",
+          leaving ? "splash-exit-blur" : "",
         ].join(" ")}
       >
-        <div className="relative h-20 w-20">
-          <Image
-            src={appLogo}
-            alt="TeleStock logo"
-            priority
-            sizes="80px"
-            fill
-            style={{ objectFit: "contain" }}
+        <div className="relative h-24 w-24">
+          {/* Rotating conic ring behind logo */}
+          <span
+            className={[
+              "absolute inset-[-8px] rounded-full",
+              "bg-[conic-gradient(from_0deg,theme(colors.primary.DEFAULT)_0%,transparent_40%,theme(colors.ring)_60%,transparent_80%,theme(colors.primary.DEFAULT)_100%)]",
+              prefersReducedMotion ? "" : "splash-rotate",
+              "opacity-40",
+            ].join(" ")}
+            aria-hidden
           />
+          {/* Logo */}
+          <span
+            className={[
+              "absolute inset-0 grid place-items-center rounded-full",
+              prefersReducedMotion ? "" : "splash-logo-pop splash-breath",
+            ].join(" ")}
+          >
+            <span
+              className={[
+                "absolute inset-[-6px] rounded-full",
+                prefersReducedMotion ? "" : "splash-glow",
+              ].join(" ")}
+              aria-hidden
+            />
+            <Image
+              src={appLogo}
+              alt="TeleStock logo"
+              priority
+              sizes="96px"
+              fill
+              style={{ objectFit: "contain" }}
+            />
+          </span>
         </div>
-        <div className="text-2xl font-semibold font-brand tracking-tight">TeleStock</div>
+        <div
+          className={[
+            "text-2xl font-semibold font-brand tracking-tight",
+            prefersReducedMotion ? "" : "splash-text-in",
+          ].join(" ")}
+        >
+          TeleStock
+        </div>
       </div>
     </div>
   )
