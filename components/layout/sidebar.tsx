@@ -110,7 +110,7 @@ export function Sidebar({ onClose }: SidebarProps) {
                 <Building2 className="h-5 w-5" />
               </div>
               <div className="flex-1">
-                <h2 className="text-lg font-bold">TWMS</h2>
+                <h2 className="text-lg font-brand">TeleStock</h2>
                 <p className="text-xs opacity-90">Warehouse Management</p>
               </div>
             </div>
