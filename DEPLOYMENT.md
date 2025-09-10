@@ -1,4 +1,4 @@
-# Tele-WMS deployment guide (Vercel + Neon)
+# TeleStock deployment guide (Vercel + Neon)
 
 This project is a Next.js 15 App Router app using Prisma + PostgreSQL. Below are the steps to deploy on Vercel with a Neon Postgres database.
 
