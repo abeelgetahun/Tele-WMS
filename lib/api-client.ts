@@ -37,11 +37,23 @@ class ApiClient {
     const response = await fetch(url, config)
 
     if (!response.ok) {
-      const error = await response.json().catch(() => ({ error: "Network error" }))
-      throw new Error(error.error || `HTTP error! status: ${response.status}`)
+      // Auto-logout on auth failures so the app can recover consistently
+      if (response.status === 401 || response.status === 403) {
+        try {
+          localStorage.removeItem("token")
+          localStorage.removeItem("user")
+        } catch {}
+        if (typeof window !== "undefined") {
+          window.location.href = "/login"
+        }
+      }
+
+      const errorBody = await response.json().catch(() => ({ error: "Network error" }))
+      throw new Error(errorBody.error || `HTTP error! status: ${response.status}`)
     }
 
-    return response.json()
+    const data = await response.json().catch(() => ({}))
+    return data as T
   }
 
   // Auth endpoints
