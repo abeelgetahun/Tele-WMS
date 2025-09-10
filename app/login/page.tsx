@@ -3,7 +3,7 @@
 import type React from "react"
 
 import Image from "next/image"
-import ethioLogo from "@/assets/ethio-telecom-logo.png"
+import appLogo from "@/assets/app_logo.png"
 
 import { useState } from "react"
 import { useRouter } from "next/navigation"
@@ -48,13 +48,13 @@ export default function LoginPage() {
       <div className="max-w-md w-full space-y-4 sm:space-y-6 md:space-y-8">
         <div className="text-center flex flex-col items-center">
           <Image
-            src={ethioLogo}
-            alt="Ethio Telecom Logo"
-            className="h-12 sm:h-16 w-auto object-contain"
+            src={appLogo}
+            alt="TeleStock Logo"
+            className="h-16 sm:h-24 w-auto object-contain"
             priority
           /> 
-          <h2 className="mt-4 sm:mt-6 text-xl sm:text-2xl md:text-3xl font-extrabold text-gray-900 leading-tight px-2 sm:px-0">
-            Tele Warehouse Management System
+          <h2 className="font-brand mt-4 sm:mt-6 text-2xl sm:text-3xl md:text-4xl text-gray-900 leading-tight px-2 sm:px-0">
+            TeleStock
           </h2>
           <div className="mt-3 flex flex-col items-center gap-3">
             <div className="flex flex-col sm:flex-row items-center gap-2">
