@@ -32,14 +32,14 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined)
 const MANUAL_USERS: Array<AuthUser & { password?: string }> = [
   {
     id: "admin-1",
-    email: "admin@ethiotelecom.et",
+  email: "admin@telecom.et",
     password: "admin123",
     name: "System Administrator",
     role: "ADMIN" as UserRole,
   },
   {
     id: "manager-1",
-    email: "manager@ethiotelecom.et",
+  email: "manager@telecom.et",
     password: "manager123",
     name: "Warehouse Manager",
     role: "WAREHOUSE_MANAGER" as UserRole,
@@ -48,7 +48,7 @@ const MANUAL_USERS: Array<AuthUser & { password?: string }> = [
   },
   {
     id: "clerk-1",
-    email: "clerk@ethiotelecom.et",
+  email: "clerk@telecom.et",
     password: "clerk123",
     name: "Inventory Clerk",
     role: "INVENTORY_CLERK" as UserRole,
@@ -57,14 +57,14 @@ const MANUAL_USERS: Array<AuthUser & { password?: string }> = [
   },
   {
     id: "technician-1",
-    email: "technician@ethiotelecom.et",
+  email: "technician@telecom.et",
     password: "tech123",
     name: "System Technician",
     role: "TECHNICIAN" as UserRole,
   },
   {
     id: "auditor-1",
-    email: "auditor@ethiotelecom.et",
+  email: "auditor@telecom.et",
     password: "audit123",
     name: "System Auditor",
     role: "AUDITOR" as UserRole,

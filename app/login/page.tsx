@@ -34,10 +34,10 @@ export default function LoginPage() {
       if (success) {
         router.push("/dashboard")
       } else {
-        setError("Invalid email or password")
+        setError("Email and password don’t match")
       }
     } catch (err) {
-      setError("Login failed. Please try again.")
+      setError("Email and password don’t match")
     } finally {
       setLoading(false)
     }
@@ -52,7 +52,7 @@ export default function LoginPage() {
             alt="TeleStock Logo"
             className="h-16 sm:h-24 w-auto object-contain"
             priority
-          /> 
+          />
           <h2 className="font-brand mt-4 sm:mt-6 text-2xl sm:text-3xl md:text-4xl text-gray-900 leading-tight px-2 sm:px-0">
             TeleStock
           </h2>
@@ -62,28 +62,38 @@ export default function LoginPage() {
               <button
                 type="button"
                 onClick={() => setShowDemoCredentials(!showDemoCredentials)}
-                aria-label="Toggle demo credentials"
-                className="inline-flex items-center justify-center rounded-full p-2 bg-blue-100 text-blue-600 hover:bg-blue-200 hover:text-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-colors duration-200 shadow-sm"
+                aria-label="Toggle demo accounts"
+                className="inline-flex items-center justify-center rounded-full px-3 py-1.5 bg-primary/10 text-primary hover:bg-primary/20 focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 transition-colors duration-200 shadow-sm text-xs font-medium"
               >
-                <HelpCircle className="h-5 w-5" />
+                <HelpCircle className="mr-1.5 h-4 w-4" />
+                {showDemoCredentials ? "Hide demo accounts" : "View demo accounts"}
               </button>
             </div>
-            
+
             {showDemoCredentials && (
-              <div className="mt-2 p-4 bg-blue-50 border border-blue-200 rounded-lg text-left w-full max-w-sm mx-auto shadow-sm">
-                <p className="font-medium text-blue-900 text-sm mb-3">Demo Credentials</p>
-                <div className="space-y-2 text-xs text-blue-800">
-                  <div className="flex flex-col sm:flex-row sm:justify-between">
-                    <span className="font-medium">Admin:</span>
-                    <span className="break-all">admin@ethiotelecom.et / admin123</span>
-                  </div>
-                  <div className="flex flex-col sm:flex-row sm:justify-between">
-                    <span className="font-medium">Manager:</span>
-                    <span className="break-all">manager@ethiotelecom.et / manager123</span>
-                  </div>
-                  <div className="flex flex-col sm:flex-row sm:justify-between">
-                    <span className="font-medium">Clerk:</span>
-                    <span className="break-all">clerk@ethiotelecom.et / clerk123</span>
+              <div className="mt-2 w-full max-w-sm mx-auto">
+                <div className="rounded-lg border bg-card text-card-foreground shadow-sm">
+                  <div className="p-4">
+                    <p className="font-medium text-sm mb-2 flex items-center gap-2">
+                      <Building2 className="h-4 w-4 text-primary" /> Demo accounts
+                    </p>
+                    <p className="text-xs text-muted-foreground mb-3">
+                      Use corporate emails like <span className="font-medium text-foreground">name@telecom.et</span>
+                    </p>
+                    <div className="space-y-2 text-xs">
+                      <div className="flex flex-col sm:flex-row sm:justify-between">
+                        <span className="font-medium">Admin:</span>
+                        <span className="break-all">admin@telecom.et / admin123</span>
+                      </div>
+                      <div className="flex flex-col sm:flex-row sm:justify-between">
+                        <span className="font-medium">Manager:</span>
+                        <span className="break-all">manager@telecom.et / manager123</span>
+                      </div>
+                      <div className="flex flex-col sm:flex-row sm:justify-between">
+                        <span className="font-medium">Clerk:</span>
+                        <span className="break-all">clerk@telecom.et / clerk123</span>
+                      </div>
+                    </div>
                   </div>
                 </div>
               </div>
@@ -94,7 +104,7 @@ export default function LoginPage() {
         <Card className="shadow-lg">
           <CardHeader className="space-y-1">
             <CardTitle className="text-xl sm:text-2xl">Login</CardTitle>
-            <CardDescription>Enter your credentials to access the system</CardDescription>
+            <CardDescription>Use your corporate email (e.g., name@telecom.et)</CardDescription>
           </CardHeader>
           <CardContent>
             <form onSubmit={handleSubmit} className="space-y-4">
@@ -105,7 +115,7 @@ export default function LoginPage() {
                   type="email"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  placeholder="Enter your email"
+                  placeholder="you@telecom.et"
                   className="h-11"
                   required
                 />
@@ -125,7 +135,7 @@ export default function LoginPage() {
               </div>
 
               {error && (
-                <Alert variant="destructive">
+                <Alert variant="destructive" role="alert" aria-live="polite">
                   <AlertDescription>{error}</AlertDescription>
                 </Alert>
               )}
