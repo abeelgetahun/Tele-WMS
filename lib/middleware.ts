@@ -66,19 +66,44 @@ export function withAuth(handler: Function) {
         return NextResponse.json({ error: "Invalid or expired token" }, { status: 401 })
       }
 
-      // Get user details from database to ensure we have the latest role and warehouse info
-      const user = await prisma.user.findUnique({
-        where: { id: payload.userId },
-        select: {
-          id: true,
-          email: true,
-          role: true,
-          warehouseId: true,
-          isActive: true,
-        },
-      })
+      // Small, in-memory cache to avoid hitting DB on every request in dev
+      const cacheKey = `user:${payload.userId}`
+      const cache = (globalThis as any).__authUserCache || ((globalThis as any).__authUserCache = new Map())
 
-      if (!user || !user.isActive) {
+      let user = cache.get(cacheKey)
+      const now = Date.now()
+      if (!user || (user._expiresAt && user._expiresAt < now)) {
+        try {
+          user = await prisma.user.findUnique({
+            where: { id: payload.userId },
+            select: {
+              id: true,
+              email: true,
+              role: true,
+              warehouseId: true,
+              isActive: true,
+            },
+          })
+          if (user) {
+            cache.set(cacheKey, { ...user, _expiresAt: now + 15_000 }) // cache for 15s
+          }
+        } catch (e) {
+          // If DB is temporarily unavailable in development, fall back to JWT payload
+          if (process.env.NODE_ENV !== "production") {
+            user = {
+              id: payload.userId,
+              email: payload.email,
+              role: payload.role as any,
+              warehouseId: undefined,
+              isActive: true,
+            }
+          } else {
+            throw e
+          }
+        }
+      }
+
+      if (!user || user.isActive === false) {
         return NextResponse.json({ error: "User not found or inactive" }, { status: 401 })
       }
 

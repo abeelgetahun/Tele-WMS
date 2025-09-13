@@ -8,6 +8,7 @@ First, set up your local environment and database, then run the development serv
 1) Copy env and configure Postgres/JWT
 
 	- Copy `.env.example` to `.env` and update `DATABASE_URL`, `JWT_SECRET`.
+	- If using Neon, use the pooled connection string for runtime traffic and set `?pgbouncer=true&connection_limit=1`. Use a non-pooled `DIRECT_URL` for Prisma Migrate.
 	- Ensure your PostgreSQL instance is running and the database exists.
 
 2) Install deps and generate Prisma client
@@ -43,6 +44,12 @@ Open [http://localhost:3000](http://localhost:3000) with your browser to see the
 You can start editing the app. API routes live under `app/api/*` and use Prisma to connect to Postgres.
 
 This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+
+## Notes on Prisma connections (Neon/PgBouncer)
+
+- Runtime should use pooled URL with low `connection_limit` to avoid P2024 timeouts.
+- Migrations use `DIRECT_URL` to bypass PgBouncer.
+- In dev, we also append safe defaults automatically if `DATABASE_URL` contains `neon.tech`.
 
 ## Learn More
 

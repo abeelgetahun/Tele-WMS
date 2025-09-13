@@ -147,3 +147,55 @@
   60% { transform: scale(1.02); opacity: 1 }
   100% { transform: scale(1); opacity: 1 }
 }
+
+/* Splash: enhanced animations */
+@keyframes splash-logo-pop {
+  0% { transform: scale(0.92); opacity: 0 }
+  55% { transform: scale(1.06); opacity: 1 }
+  100% { transform: scale(1); opacity: 1 }
+}
+
+@keyframes splash-breath {
+  0%, 100% { transform: scale(1) }
+  50% { transform: scale(1.025) }
+}
+
+@keyframes splash-rotate {
+  to { transform: rotate(360deg) }
+}
+
+@keyframes splash-glow {
+  0%, 100% { box-shadow: 0 0 0 0 hsl(var(--ring) / 0) }
+  50% { box-shadow: 0 0 0 10px hsl(var(--ring) / 0.08) }
+}
+
+@keyframes splash-text-in {
+  0% { transform: translateY(8px); opacity: 0 }
+  100% { transform: translateY(0); opacity: 1 }
+}
+
+@keyframes splash-exit-blur {
+  0% { filter: blur(0px); transform: translateY(0) scale(1); opacity: 1 }
+  100% { filter: blur(4px); transform: translateY(8px) scale(0.985); opacity: 0 }
+}
+
+/* Convenience classes so we don't need to touch Tailwind config */
+@layer utilities {
+  .splash-logo-pop { animation: splash-logo-pop 600ms cubic-bezier(0.16, 1, 0.3, 1) both }
+  .splash-breath { animation: splash-breath 2200ms ease-in-out 600ms infinite }
+  .splash-rotate { animation: splash-rotate 1400ms ease-in-out infinite }
+  .splash-glow { animation: splash-glow 1800ms ease-in-out infinite }
+  .splash-text-in { animation: splash-text-in 500ms ease-out 200ms both }
+  .splash-exit-blur { animation: splash-exit-blur 450ms ease forwards }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .splash-logo-pop,
+  .splash-breath,
+  .splash-rotate,
+  .splash-glow,
+  .splash-text-in,
+  .splash-exit-blur {
+    animation: none !important;
+  }
+}
