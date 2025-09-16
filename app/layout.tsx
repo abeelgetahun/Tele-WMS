@@ -5,6 +5,7 @@ import "./globals.css"
 import { AuthProvider } from "@/context/auth-context"
 import { Toaster } from "@/components/ui/toaster"
 import SplashScreen from "@/components/layout/splash-screen"
+import { Analytics } from "@vercel/analytics/next"
 
 const inter = Inter({ subsets: ["latin"], variable: "--font-inter" })
 const carterOne = Carter_One({ weight: "400", subsets: ["latin"], variable: "--font-carter-one" })
@@ -27,6 +28,7 @@ export default function RootLayout({
           <SplashScreen />
           {children}
           <Toaster />
+          <Analytics />
         </AuthProvider>
       </body>
     </html>
