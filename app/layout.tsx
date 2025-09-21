@@ -14,6 +14,13 @@ export const metadata: Metadata = {
   title: "TeleStock",
   description: "TeleStock —  Telecom Warehouse Management System",
   viewport: "width=device-width, initial-scale=1, maximum-scale=1",
+  icons: {
+    icon: [
+      { url: "/assets/app_logo.png", type: "image/png" },
+    ],
+    apple: [{ url: "/assets/app_logo.png" }],
+    shortcut: [{ url: "/assets/app_logo.png" }],
+  },
 }
 
 export default function RootLayout({
